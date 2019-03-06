@@ -1,0 +1,12 @@
+{
+    "name"        : "phraseanet/buildsubdefs-service",
+    "description" : "Phraseanet plugin poc buildsubdefs service",
+    "license"     : "MIT",
+    "require": {},
+    "require-dev": {},
+    "autoload": {
+        "psr-4": {
+            "Alchemy\\WorkerPlugin\\"     : "src/"
+        }
+    }
+}

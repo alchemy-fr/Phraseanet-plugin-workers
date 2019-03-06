@@ -1,0 +1,14 @@
+{
+    "name": "phraseanet-plugin-poc-service-buildsubdefs",
+    "description" : "Phraseanet plugin poc buildsubdefs service",
+    "keywords"    : ["buildsubdefs"],
+    "license"     : "MIT",
+    "version"     : "1.0.0",
+    "minimum-phraseanet-version": "4",
+    "maximum-phraseanet-version": "4.1.100",
+    "services" : [
+        {
+            "class": "Alchemy\\WorkerPlugin\\PluginServiceProvider"
+        }
+    ]
+}
