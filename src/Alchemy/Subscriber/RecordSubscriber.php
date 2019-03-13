@@ -12,17 +12,17 @@ class RecordSubscriber implements EventSubscriberInterface
 {
     private $app;
 
+    /** @var MessagePublisher $messagePublisher */
+    private $messagePublisher;
+
     public function __construct(Application $app)
     {
         $this->app = $app;
+        $this->messagePublisher = $this->app['worker.event.publisher'];
     }
 
-    public function onRecordCreated(RecordEvent $event)
+    public function onBuildSubdefs(RecordEvent $event)
     {
-        /** @var MessagePublisher $messagePublisher */
-
-        $messagePublisher = $this->app['worker.event.publisher'];
-
         $payload = [
             'message_type' => MessagePublisher::SUBDEF_CREATION_TYPE,
             'payload' => [
@@ -31,13 +31,14 @@ class RecordSubscriber implements EventSubscriberInterface
             ]
         ];
 
-        $messagePublisher->publishMessage($payload);
+        $this->messagePublisher->publishMessage($payload);
     }
 
     public static function getSubscribedEvents()
     {
         return [
-            RecordEvents::CREATED => 'onRecordCreated',
+            RecordEvents::CREATED                   => 'onBuildSubdefs',
+            RecordEvents::SUB_DEFINITION_REBUILD    => 'onBuildSubdefs',
         ];
     }
 }
