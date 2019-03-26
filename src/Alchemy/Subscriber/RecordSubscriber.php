@@ -33,8 +33,6 @@ class RecordSubscriber implements EventSubscriberInterface
         ];
 
         $this->messagePublisher->publishMessage($payload, 'subdef-queue');
-
-        $this->messagePublisher->connectionClose();
     }
 
     public function onMetadataChange(MetadataChangedEvent $event)
@@ -48,8 +46,6 @@ class RecordSubscriber implements EventSubscriberInterface
         ];
 
         $this->messagePublisher->publishMessage($payload, 'metadatas-queue');
-
-        $this->messagePublisher->connectionClose();
     }
 
     public static function getSubscribedEvents()
