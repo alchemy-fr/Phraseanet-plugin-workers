@@ -13,8 +13,13 @@ class AMQPConnection
     /** @var  AMQPChannel */
     private $channel;
 
+    private $hostConfig;
+
     public function __construct(MessageQueueRegistry $queueRegistry)
     {
+        $configurations = $queueRegistry->getConfigurations();
+        $this->hostConfig =  reset($configurations);
+
         $this->getChannel();
         $this->declareExchange();
 
@@ -28,7 +33,12 @@ class AMQPConnection
     public function getConnection()
     {
         if (!isset($this->connection)) {
-            $this->connection =  new AMQPStreamConnection('localhost', 5672, 'guest', 'guest');
+            $this->connection =  new AMQPStreamConnection(
+                $this->hostConfig['host'],
+                $this->hostConfig['port'],
+                $this->hostConfig['user'],
+                $this->hostConfig['password'],
+                $this->hostConfig['vhost']);
         }
 
         return $this->connection;
