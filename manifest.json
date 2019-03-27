@@ -10,5 +10,10 @@
         {
             "class": "Alchemy\\WorkerPlugin\\PluginServiceProvider"
         }
+    ],
+    "commands" : [
+        {
+            "class": "Alchemy\\WorkerPlugin\\Command\\WorkerCommand"
+        }
     ]
 }

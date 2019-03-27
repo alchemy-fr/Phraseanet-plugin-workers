@@ -1,6 +1,6 @@
 <?php
 
-namespace Alchemy\WorkerPlugin\Queue;
+namespace Alchemy\WorkerPlugin\Worker;
 
 use Alchemy\Phrasea\Application\Helper\ApplicationBoxAware;
 use Alchemy\Phrasea\Media\SubdefGenerator;
@@ -32,6 +32,4 @@ class SubdefCreationWorker implements Worker
             $subdefGenerator->generateSubdefs($record);
         }
     }
-
-
 }

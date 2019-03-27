@@ -14,8 +14,11 @@ namespace Alchemy\WorkerPlugin;
 use Alchemy\Phrasea\Plugin\PluginProviderInterface;
 use Alchemy\Phrasea\Application as PhraseaApplication;
 use Alchemy\Worker\CallableWorkerFactory;
-use Alchemy\WorkerPlugin\Queue\SubdefCreationWorker;
+use Alchemy\WorkerPlugin\Queue\AMQPConnection;
+use Alchemy\WorkerPlugin\Queue\MessageHandler;
+use Alchemy\WorkerPlugin\Worker\SubdefCreationWorker;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
+use Alchemy\WorkerPlugin\Worker\WriteMetadatasWorker;
 use Alchemy\WorkerPlugin\Subscriber\RecordSubscriber;
 use Silex\Application;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -27,8 +30,16 @@ class PluginServiceProvider implements PluginProviderInterface
      */
     public function register(Application $app)
     {
+        $app['worker.amqp.connection'] = $app->share(function (Application $app) {
+            return new AMQPConnection($app['alchemy_worker.queue_registry']);
+        });
+
+        $app['worker.message.handler'] = $app->share(function (Application $app) {
+            return new MessageHandler($app);
+        });
+
         $app['worker.event.publisher'] = $app->share(function (Application $app) {
-            return new MessagePublisher($app['alchemy_worker.queue_registry'], $app['alchemy_worker.queue_name']);
+            return new MessagePublisher($app['alchemy_worker.queue_registry'], $app);
         });
 
         $app['dispatcher'] = $app->share(
@@ -41,6 +52,11 @@ class PluginServiceProvider implements PluginProviderInterface
 
         $app['alchemy_worker.worker_resolver']->setFactory(MessagePublisher::SUBDEF_CREATION_TYPE, new CallableWorkerFactory(function () use ($app) {
             return (new SubdefCreationWorker($app))
+                ->setApplicationBox($app['phraseanet.appbox']);
+        }));
+
+        $app['alchemy_worker.worker_resolver']->setFactory(MessagePublisher::WRITE_METADATAs_TYPE, new CallableWorkerFactory(function () use ($app) {
+            return (new WriteMetadatasWorker($app))
                 ->setApplicationBox($app['phraseanet.appbox']);
         }));
     }

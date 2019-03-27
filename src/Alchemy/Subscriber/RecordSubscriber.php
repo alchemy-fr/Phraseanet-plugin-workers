@@ -2,6 +2,7 @@
 
 namespace Alchemy\WorkerPlugin\Subscriber;
 
+use Alchemy\Phrasea\Core\Event\Record\MetadataChangedEvent;
 use Alchemy\Phrasea\Core\Event\Record\RecordEvent;
 use Alchemy\Phrasea\Core\Event\Record\RecordEvents;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
@@ -31,7 +32,20 @@ class RecordSubscriber implements EventSubscriberInterface
             ]
         ];
 
-        $this->messagePublisher->publishMessage($payload);
+        $this->messagePublisher->publishMessage($payload, 'subdef-queue');
+    }
+
+    public function onMetadataChange(MetadataChangedEvent $event)
+    {
+        $payload = [
+            'message_type' => MessagePublisher::WRITE_METADATAs_TYPE,
+            'payload' => [
+                'recordId'  => $event->getRecord()->getRecordId(),
+                'databoxId' => $event->getRecord()->getDataboxId()
+            ]
+        ];
+
+        $this->messagePublisher->publishMessage($payload, 'metadatas-queue');
     }
 
     public static function getSubscribedEvents()
@@ -39,6 +53,7 @@ class RecordSubscriber implements EventSubscriberInterface
         return [
             RecordEvents::CREATED                   => 'onBuildSubdefs',
             RecordEvents::SUB_DEFINITION_REBUILD    => 'onBuildSubdefs',
+            RecordEvents::METADATA_CHANGED          => 'onMetadataChange',
         ];
     }
 }
