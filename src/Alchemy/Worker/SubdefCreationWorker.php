@@ -4,10 +4,9 @@ namespace Alchemy\WorkerPlugin\Worker;
 
 use Alchemy\Phrasea\Application\Helper\ApplicationBoxAware;
 use Alchemy\Phrasea\Media\SubdefGenerator;
-use Alchemy\Worker\Worker;
 use Silex\Application;
 
-class SubdefCreationWorker implements Worker
+class SubdefCreationWorker implements WorkerInterface
 {
     use ApplicationBoxAware;
 

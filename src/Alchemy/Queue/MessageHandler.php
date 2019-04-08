@@ -2,11 +2,10 @@
 
 namespace Alchemy\WorkerPlugin\Queue;
 
+use Alchemy\WorkerPlugin\Worker\WorkerInvoker;
 use Silex\Application;
 use PhpAmqpLib\Message\AMQPMessage;
 use Ramsey\Uuid\Uuid;
-use Alchemy\Worker\WorkerInvoker;
-use Alchemy\Queue\MessageQueueRegistry;
 use PhpAmqpLib\Channel\AMQPChannel;
 
 class MessageHandler
@@ -20,7 +19,7 @@ class MessageHandler
 
     public function consume(AMQPChannel $channel, WorkerInvoker $workerInvoker, $argQueueName)
     {
-        $publisher = $this->app['worker.event.publisher'];
+        $publisher = $this->app['alchemy_service.message.publisher'];
 
         // define consume callbacks
         $callback = function (AMQPMessage $message) use ($channel, $workerInvoker, $publisher) {
@@ -32,7 +31,7 @@ class MessageHandler
                 $channel->basic_ack($message->delivery_info['delivery_tag']);
 
                 if ($data['message_type'] !==  MessagePublisher::LOGS_TYPE) {
-                    $data['message'] = $data['message_type'].' have been treated';
+                    $data['message'] = $data['message_type'].' have been consumed!';
                     $data['message_type'] = MessagePublisher::LOGS_TYPE;
 
                     $publisher->publishMessage($data, 'logs-queue');
@@ -43,12 +42,12 @@ class MessageHandler
 
         };
 
-        /** @var MessageQueueRegistry $queueRegistry */
-        $queueRegistry = $this->app['alchemy_worker.queue_registry'];
+        /** @var QueueRegistry $queueRegistry */
+        $queueRegistry = $this->app['alchemy_service.queue_registry'];
 
         foreach ($queueRegistry->getConfigurations() as $queueName => $config) {
             if ($argQueueName ) {
-                if ($argQueueName === $queueName) {
+                if (in_array($queueName, $argQueueName)) {
                     $channel->basic_consume($queueName, Uuid::uuid4(), false, false, false, false, $callback);
                 }
             } else {

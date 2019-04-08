@@ -19,7 +19,7 @@ class RecordSubscriber implements EventSubscriberInterface
     public function __construct(Application $app)
     {
         $this->app = $app;
-        $this->messagePublisher = $this->app['worker.event.publisher'];
+        $this->messagePublisher = $this->app['alchemy_service.message.publisher'];
     }
 
     public function onBuildSubdefs(RecordEvent $event)
@@ -32,7 +32,7 @@ class RecordSubscriber implements EventSubscriberInterface
             ]
         ];
 
-        $this->messagePublisher->publishMessage($payload, 'subdef-queue');
+        $this->messagePublisher->publishMessage($payload, MessagePublisher::SUBDEF_QUEUE);
     }
 
     public function onMetadataChange(MetadataChangedEvent $event)
@@ -45,7 +45,7 @@ class RecordSubscriber implements EventSubscriberInterface
             ]
         ];
 
-        $this->messagePublisher->publishMessage($payload, 'metadatas-queue');
+        $this->messagePublisher->publishMessage($payload, MessagePublisher::METADATAS_QUEUE);
     }
 
     public static function getSubscribedEvents()

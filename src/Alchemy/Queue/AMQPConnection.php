@@ -4,10 +4,11 @@ namespace Alchemy\WorkerPlugin\Queue;
 
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
-use Alchemy\Queue\MessageQueueRegistry;
 
 class AMQPConnection
 {
+    const ALCHEMY_EXCHANGE = 'alchemy-exchange';
+
     /** @var  AMQPStreamConnection */
     private $connection;
     /** @var  AMQPChannel */
@@ -15,18 +16,21 @@ class AMQPConnection
 
     private $hostConfig;
 
-    public function __construct(MessageQueueRegistry $queueRegistry)
+    /** @var QueueRegistry  */
+    private $queueRegistry;
+
+    public function __construct(QueueRegistry $queueRegistry)
     {
-        $configurations = $queueRegistry->getConfigurations();
+        $this->queueRegistry = $queueRegistry;
+
+        $configurations = $this->queueRegistry->getConfigurations();
         $this->hostConfig =  reset($configurations);
 
         $this->getChannel();
         $this->declareExchange();
 
-        foreach ($queueRegistry->getConfigurations() as $queue => $config) {
-            $this->channel->queue_declare($queue, false, true, false, false);
-
-            $this->channel->queue_bind($queue, 'alchemy-exchange', $queue);
+        foreach ($this->queueRegistry->getConfigurations() as $queue => $config) {
+            $this->setQueue($queue);
         }
     }
 
@@ -55,7 +59,25 @@ class AMQPConnection
 
     public function declareExchange()
     {
-        $this->channel->exchange_declare('alchemy-exchange', 'direct', false, true, false);
+        $this->channel->exchange_declare(self::ALCHEMY_EXCHANGE, 'direct', false, true, false);
+    }
+
+    /**
+     * @param $queueName
+     * @return AMQPChannel
+     */
+    public function setQueue($queueName)
+    {
+        if (!isset($this->channel)) {
+            $this->getChannel();
+            $this->declareExchange();
+        }
+
+        $this->channel->queue_declare($queueName, false, true, false, false);
+
+        $this->channel->queue_bind($queueName, self::ALCHEMY_EXCHANGE, $queueName);
+
+        return $this->channel;
     }
 
     public function connectionClose()

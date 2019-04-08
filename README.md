@@ -1,5 +1,5 @@
-# Phraseanet-plugin-poc-service-buildsubdefs
-This is the repository for Poc buildsubdefs service in 4.1 PHRAS-2435
+# Phraseanet-plugin-services
+This is the repository for worker services in 4.1 PHRAS-2435
 
 Suscribe for the event record.created and generate subdef
 
