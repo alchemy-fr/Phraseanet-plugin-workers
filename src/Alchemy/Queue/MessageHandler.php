@@ -31,10 +31,10 @@ class MessageHandler
                 $channel->basic_ack($message->delivery_info['delivery_tag']);
 
                 if ($data['message_type'] !==  MessagePublisher::LOGS_TYPE) {
-                    $data['message'] = $data['message_type'].' have been consumed!';
+                    $data['payload']['message'] = $data['message_type'].' have been consumed!';
                     $data['message_type'] = MessagePublisher::LOGS_TYPE;
 
-                    $publisher->publishMessage($data, 'logs-queue');
+                    $publisher->publishMessage($data, MessagePublisher::LOGS_QUEUE);
                 }
             } catch (\Exception $e) {
                 $channel->basic_nack($message->delivery_info['delivery_tag']);
@@ -42,23 +42,16 @@ class MessageHandler
 
         };
 
-        /** @var QueueRegistry $queueRegistry */
-        $queueRegistry = $this->app['alchemy_service.queue_registry'];
-
-        foreach ($queueRegistry->getConfigurations() as $queueName => $config) {
+        foreach (AMQPConnection::$dafaultQueues as $queueName) {
             if ($argQueueName ) {
                 if (in_array($queueName, $argQueueName)) {
                     $channel->basic_consume($queueName, Uuid::uuid4(), false, false, false, false, $callback);
                 }
             } else {
-
-                //  TODO : consume logs and write logs in file
-                if ($queueName != 'logs-queue') {
                     $channel->basic_consume($queueName, Uuid::uuid4(), false, false, false, false, $callback);
-                }
             }
-
         }
+
     }
 
 }

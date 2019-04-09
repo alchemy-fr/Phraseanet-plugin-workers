@@ -12,7 +12,10 @@ use Alchemy\WorkerPlugin\Worker\ProcessPool;
 use Alchemy\WorkerPlugin\Worker\Resolver\TypeBasedWorkerResolver;
 use Alchemy\WorkerPlugin\Worker\SubdefCreationWorker;
 use Alchemy\WorkerPlugin\Worker\WorkerInvoker;
+use Alchemy\WorkerPlugin\Worker\WriteLogsWorker;
 use Alchemy\WorkerPlugin\Worker\WriteMetadatasWorker;
+use Monolog\Handler\RotatingFileHandler;
+use Monolog\Logger;
 use Psr\Log\LoggerAwareInterface;
 use Silex\Application;
 
@@ -22,6 +25,17 @@ class WorkerServiceProvider implements PluginProviderInterface
     {
         $app['alchemy_service.type_based_worker_resolver'] = $app->share(function () {
             return new TypeBasedWorkerResolver();
+        });
+
+        $app['alchemy_service.logger'] = $app->share(function (Application $app) {
+            $logger = new $app['monolog.logger.class']('alchemy-service logger');
+            $logger->pushHandler(new RotatingFileHandler(
+                $app['log.path'] . DIRECTORY_SEPARATOR . 'worker_service.log',
+                10,
+                Logger::INFO
+            ));
+
+            return $logger;
         });
 
         // use the console logger
@@ -54,6 +68,10 @@ class WorkerServiceProvider implements PluginProviderInterface
         $app['alchemy_service.type_based_worker_resolver']->setFactory(MessagePublisher::EXPORT_MAIL_TYPE, new CallableWorkerFactory(function () use ($app) {
             return (new ExportMailWorker($app))
                 ->setDelivererLocator(new LazyLocator($app, 'notification.deliverer'));
+        }));
+
+        $app['alchemy_service.type_based_worker_resolver']->setFactory(MessagePublisher::LOGS_TYPE, new CallableWorkerFactory(function () use ($app) {
+            return new WriteLogsWorker($app);
         }));
     }
 

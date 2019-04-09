@@ -16,22 +16,25 @@ class AMQPConnection
 
     private $hostConfig;
 
-    /** @var QueueRegistry  */
-    private $queueRegistry;
+    public static $dafaultQueues = [
+        MessagePublisher::METADATAS_QUEUE   => MessagePublisher::METADATAS_QUEUE,
+        MessagePublisher::SUBDEF_QUEUE      => MessagePublisher::SUBDEF_QUEUE,
+        MessagePublisher::EXPORT_QUEUE      => MessagePublisher::EXPORT_QUEUE,
+        MessagePublisher::LOGS_QUEUE        => MessagePublisher::LOGS_QUEUE,
+        MessagePublisher::WEBHOOK_QUEUE     => MessagePublisher::WEBHOOK_QUEUE,
+    ];
 
-    public function __construct(QueueRegistry $queueRegistry)
+    public function __construct(array $serverConfiguration)
     {
-        $this->queueRegistry = $queueRegistry;
-
-        $configurations = $this->queueRegistry->getConfigurations();
-        $this->hostConfig =  reset($configurations);
+        $this->hostConfig =  $serverConfiguration;
 
         $this->getChannel();
         $this->declareExchange();
 
-        foreach ($this->queueRegistry->getConfigurations() as $queue => $config) {
+        foreach (self::$dafaultQueues as $queue ) {
             $this->setQueue($queue);
         }
+
     }
 
     public function getConnection()

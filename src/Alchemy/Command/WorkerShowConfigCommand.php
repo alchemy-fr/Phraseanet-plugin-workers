@@ -2,18 +2,13 @@
 
 namespace Alchemy\WorkerPlugin\Command;
 
-
 use Alchemy\Phrasea\Command\Command;
-use Alchemy\WorkerPlugin\Queue\QueueRegistry;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Yaml\Yaml;
 
 class WorkerShowConfigCommand extends Command
 {
-    /** @var  QueueRegistry */
-    private $queueRegistry;
-
     public function __construct()
     {
         parent::__construct('worker:show-configuration');
@@ -23,12 +18,10 @@ class WorkerShowConfigCommand extends Command
 
     public function doExecute(InputInterface $input, OutputInterface $output)
     {
-        $this->queueRegistry = $this->container['alchemy_service.queue_registry'];
+        $serverConfiguration = $this->container['alchemy_service.server'];
 
-        $output->writeln([ '', 'Configured queues: ' ]);
+        $output->writeln([ '', 'Configured server: ' ]);
 
-        foreach ($this->queueRegistry->getConfigurations() as $name => $configuration) {
-            $output->writeln([ '  ' . $name . ': ' . Yaml::dump($configuration, 0), '' ]);
-        }
+        $output->writeln([ 'Rabbit Server : ' . Yaml::dump($serverConfiguration, 0), '' ]);
     }
 }

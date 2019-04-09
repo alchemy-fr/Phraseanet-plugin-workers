@@ -15,6 +15,8 @@ class MessagePublisher
     const EXPORT_QUEUE         = 'export-queue';
     const SUBDEF_QUEUE         = 'subdef-queue';
     const METADATAS_QUEUE      = 'metadatas-queue';
+    const LOGS_QUEUE           = 'logs-queue';
+    const WEBHOOK_QUEUE        = 'webhook-queue';
 
     private $app;
 
