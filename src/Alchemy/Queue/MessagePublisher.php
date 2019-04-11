@@ -20,15 +20,9 @@ class MessagePublisher
 
     private $app;
 
-    /**
-     * @var string
-     */
-    private $queueName;
-
     public function __construct(Application $app)
     {
         $this->app = $app;
-        $this->queueName = $app['alchemy_worker.queue_name'];
     }
 
     public function setQueueName($newQueueName)
@@ -36,16 +30,15 @@ class MessagePublisher
         $this->queueName = $newQueueName;
     }
 
-    public function publishMessage(array $payload, $queueName = null)
+    public function publishMessage(array $payload, $queueName)
     {
         /** @var AMQPConnection $serverConnection */
         $serverConnection = $this->app['alchemy_service.amqp.connection'];
 
         $msg = new AMQPMessage(json_encode($payload));
 
-        $routing = $queueName?:$this->queueName;
-        $channel = $serverConnection->setQueue($routing);
-        $channel->basic_publish($msg, AMQPConnection::ALCHEMY_EXCHANGE, $routing);
+        $channel = $serverConnection->setQueue($queueName);
+        $channel->basic_publish($msg, AMQPConnection::ALCHEMY_EXCHANGE, $queueName);
     }
 
     public function connectionClose()
