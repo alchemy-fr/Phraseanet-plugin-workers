@@ -25,11 +25,6 @@ class MessagePublisher
         $this->app = $app;
     }
 
-    public function setQueueName($newQueueName)
-    {
-        $this->queueName = $newQueueName;
-    }
-
     public function publishMessage(array $payload, $queueName)
     {
         /** @var AMQPConnection $serverConnection */
