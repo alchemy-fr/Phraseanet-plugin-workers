@@ -2,20 +2,21 @@
 
 namespace Alchemy\WorkerPlugin\Queue;
 
-use Alchemy\Queue\MessageQueueRegistry;
 use PhpAmqpLib\Message\AMQPMessage;
 use Silex\Application;
 
 class MessagePublisher
 {
-    const SUBDEF_CREATION_TYPE = "subdefCreation";
-    const WRITE_METADATAs_TYPE = "writeMetadatas";
+    const EXPORT_MAIL_TYPE     = 'exportMail';
     const LOGS_TYPE            = 'logs';
+    const SUBDEF_CREATION_TYPE = 'subdefCreation';
+    const WRITE_METADATAs_TYPE = 'writeMetadatas';
 
-    /**
-     * @var MessageQueueRegistry
-     */
-    private $queueRegistry;
+    const EXPORT_QUEUE         = 'export-queue';
+    const SUBDEF_QUEUE         = 'subdef-queue';
+    const METADATAS_QUEUE      = 'metadatas-queue';
+    const LOGS_QUEUE           = 'logs-queue';
+    const WEBHOOK_QUEUE        = 'webhook-queue';
 
     private $app;
 
@@ -24,9 +25,8 @@ class MessagePublisher
      */
     private $queueName;
 
-    public function __construct(MessageQueueRegistry $queueRegistry, Application $app)
+    public function __construct(Application $app)
     {
-        $this->queueRegistry = $queueRegistry;
         $this->app = $app;
         $this->queueName = $app['alchemy_worker.queue_name'];
     }
@@ -39,16 +39,17 @@ class MessagePublisher
     public function publishMessage(array $payload, $queueName = null)
     {
         /** @var AMQPConnection $serverConnection */
-        $serverConnection = $this->app['worker.amqp.connection'];
+        $serverConnection = $this->app['alchemy_service.amqp.connection'];
 
         $msg = new AMQPMessage(json_encode($payload));
 
-        $channel = $serverConnection->getChannel();
-        $channel->basic_publish($msg, 'alchemy-exchange', $queueName?:$this->queueName);
+        $routing = $queueName?:$this->queueName;
+        $channel = $serverConnection->setQueue($routing);
+        $channel->basic_publish($msg, AMQPConnection::ALCHEMY_EXCHANGE, $routing);
     }
 
     public function connectionClose()
     {
-        $this->app['worker.amqp.connection']->connectionClose();
+        $this->app['alchemy_service.amqp.connection']->connectionClose();
     }
 }

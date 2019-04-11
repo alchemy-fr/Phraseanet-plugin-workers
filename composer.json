@@ -1,6 +1,6 @@
 {
-    "name"        : "phraseanet/buildsubdefs-service",
-    "description" : "Phraseanet plugin poc buildsubdefs service",
+    "name"        : "phraseanet plugin services",
+    "description" : "Phraseanet plugin services",
     "license"     : "MIT",
     "require": {},
     "require-dev": {},

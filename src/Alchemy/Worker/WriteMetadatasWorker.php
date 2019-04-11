@@ -3,10 +3,9 @@
 namespace Alchemy\WorkerPlugin\Worker;
 
 use Alchemy\Phrasea\Application\Helper\ApplicationBoxAware;
-use Alchemy\Worker\Worker;
 use Silex\Application;
 
-class WriteMetadatasWorker implements Worker
+class WriteMetadatasWorker implements WorkerInterface
 {
     use ApplicationBoxAware;
 

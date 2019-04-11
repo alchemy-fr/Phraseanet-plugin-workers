@@ -1,15 +1,24 @@
-# Phraseanet-plugin-poc-service-buildsubdefs
-This is the repository for Poc buildsubdefs service in 4.1 PHRAS-2435
-
-Suscribe for the event record.created and generate subdef
+# Phraseanet-plugin-services
+This is the repository for worker services in 4.1 PHRAS-2435
 
 **To install**
 
 `bin/setup plugin:add ./plugin/path`
 
-**To dispatch queue consumer**
+**To listen queues and launch corresponding service**
 
-`bin/console workers:run-dispatcher`
+`bin/console worker:execute`
+
+ _Options :_
+ 
+ ```
+ --queue-name         The name of queues to be consuming (multiple values allowed)
+ 
+ -p                   Preserve temporary payload file
+ 
+ -m                   The max number of process allow to run ( default 4)
+ ```
+
 
 or create a service daemon /etc/systemd/system/alchemyWorker.service
 

@@ -1,19 +1,29 @@
 {
-    "name": "phraseanet-plugin-poc-service-buildsubdefs",
-    "description" : "Phraseanet plugin poc buildsubdefs service",
-    "keywords"    : ["buildsubdefs"],
+    "name": "phraseanet-plugin-services",
+    "description" : "Phraseanet plugin services",
+    "keywords"    : ["service","worker"],
     "license"     : "MIT",
     "version"     : "1.0.0",
     "minimum-phraseanet-version": "4",
     "maximum-phraseanet-version": "4.1.100",
     "services" : [
         {
-            "class": "Alchemy\\WorkerPlugin\\PluginServiceProvider"
+            "class": "Alchemy\\WorkerPlugin\\Provider\\QueueServiceProvider"
+        },
+        {
+            "class": "Alchemy\\WorkerPlugin\\Provider\\WorkerServiceProvider"
         }
     ],
     "commands" : [
         {
-            "class": "Alchemy\\WorkerPlugin\\Command\\WorkerCommand"
+            "class": "Alchemy\\WorkerPlugin\\Command\\WorkerExecuteCommand"
+        },
+        {
+            "class": "Alchemy\\WorkerPlugin\\Command\\WorkerRunServiceCommand"
+        },
+        {
+            "class": "Alchemy\\WorkerPlugin\\Command\\WorkerShowConfigCommand"
         }
+
     ]
 }
