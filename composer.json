@@ -2,7 +2,9 @@
     "name"        : "phraseanet plugin services",
     "description" : "Phraseanet plugin services",
     "license"     : "MIT",
-    "require": {},
+    "require": {
+        "php-amqplib/php-amqplib": "^2.9"
+    },
     "require-dev": {},
     "autoload": {
         "psr-4": {
