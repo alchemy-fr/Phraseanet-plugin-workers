@@ -17,14 +17,26 @@ class MessageHandler
         $this->app = $app;
     }
 
-    public function consume(AMQPChannel $channel, WorkerInvoker $workerInvoker, $argQueueName)
+    public function consume(AMQPChannel $channel, WorkerInvoker $workerInvoker, $argQueueName, $MWG, $clearMetadatas)
     {
         $publisher = $this->app['alchemy_service.message.publisher'];
 
         // define consume callbacks
-        $callback = function (AMQPMessage $message) use ($channel, $workerInvoker, $publisher) {
+        $callback = function (AMQPMessage $message) use ($channel, $workerInvoker, $publisher, $MWG, $clearMetadatas) {
 
             $data = json_decode($message->getBody(), true);
+
+            // if write metadatas service, take account args MWG and clear-metadatas
+            if ($data['message_type'] == MessagePublisher::WRITE_METADATAs_TYPE) {
+                if ($MWG) {
+                    $data['payload']['MWG'] = true;
+                }
+
+                if ($clearMetadatas) {
+                    $data['payload']['clearDoc'] = true;
+                }
+            }
+
             try {
                 $workerInvoker->invokeWorker($data['message_type'], json_encode($data['payload']));
 
