@@ -7,7 +7,7 @@ jobs:
         command: /sbin/init
     steps:
       - checkout
-      - run: phpenv global 7.0
+      - run: phpenv global 7.0.11
       - save_cache:
           key: dependency-cache
           paths:
