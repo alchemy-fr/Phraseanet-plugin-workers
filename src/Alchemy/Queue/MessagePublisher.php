@@ -33,7 +33,10 @@ class MessagePublisher
         $msg = new AMQPMessage(json_encode($payload));
 
         $channel = $serverConnection->setQueue($queueName);
+
         $channel->basic_publish($msg, AMQPConnection::ALCHEMY_EXCHANGE, $queueName);
+
+        return true;
     }
 
     public function connectionClose()

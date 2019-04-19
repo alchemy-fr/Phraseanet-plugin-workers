@@ -1,0 +1,38 @@
+version: 2
+jobs:
+  build:
+    shell: /bin/bash --login
+    docker:
+      - image: circleci/build-image:ubuntu-14.04-XXL-upstart-1189-5614f37
+        command: /sbin/init
+    steps:
+      - checkout
+      - run: phpenv global 7.0
+      - save_cache:
+          key: dependency-cache
+          paths:
+            - ~/.composer
+      - run: pecl channel-update pear.php.net
+      - run: yes '' | pecl install imagick
+      - run: sudo apt-get install libzmq-dev
+      - run: yes '' | pecl install amqp-1.9.3
+      - run: yes '' | pecl install zmq-beta
+      - run: echo "extension = amqp.so" > /opt/circleci/php/$(phpenv global)/etc/conf.d/amqp.ini
+      - run: echo "extension = zmq.so" > /opt/circleci/php/$(phpenv global)/etc/conf.d/zmq.ini
+      - run: echo "date.timezone = UTC" > /opt/circleci/php/$(phpenv global)/etc/conf.d/timezone.ini
+      - run: sed -i 's/^\(session.cache_limiter = \).*/\1""/' /opt/circleci/php/$(phpenv global)/etc/php.ini
+      - run: echo "memory_limit = -1" > /opt/circleci/php/$(phpenv global)/etc/php.ini
+      - run: composer config repositories.imagine vcs https://github.com/alchemy-fr/imagine
+      - run: composer config repositories.jms-translation git https://github.com/alchemy-fr/JMSTranslationBundle
+      - run: composer config repositories.process-manager git https://github.com/romainneutron/ProcessManager
+      - run: composer config repositories.fractal git https://github.com/alchemy-fr/fractal.git
+      - run: composer config repositories.phraseanet git https://github.com/aynsix/Phraseanet.git
+      - run:
+          name: composer require
+          command: |
+            composer require --no-interaction 'roave/security-advisories=dev-master' 'phpunit/phpunit=^4.0 || ^5.0' 'neutron/process-manager=2.0.x-dev@dev' 'alchemy/task-manager=2.0.x-dev@dev' 'league/fractal:dev-webgalleries#af1acc0275438571bc8c1d08a05a4b5af92c9f97 as 0.13.0' 'imagine/imagine=0.6.x-dev' 'jms/translation-bundle=dev-rebase-2015-10-20' 'doctrine/cache=1.6.x-dev' 'phraseanet/phraseanet=dev-PHRAS-2435-poc-subdefrebuild'
+      - run: sed -i 's/^;//' /opt/circleci/php/$(phpenv global)/etc/conf.d/xdebug.ini
+      - run: mkdir -p $CIRCLE_WORKING_DIRECTORY/phpunit
+      - run:
+          name: unit test
+          command: vendor/bin/phpunit --log-junit $CIRCLE_WORKING_DIRECTORY/phpunit/junit.xml tests
