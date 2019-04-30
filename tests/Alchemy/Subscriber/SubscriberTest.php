@@ -44,12 +44,14 @@ class SubscriberTest extends \PHPUnit_Framework_TestCase
         $event = $this->prophesize('Alchemy\Phrasea\Core\Event\Record\RecordEvent');
         $event->getRecord()->willReturn($record->reveal());
         $sut = new RecordSubscriber($app);
-        $sut->onBuildSubdefs($event->reveal());
+        $sut->onRecordCreated($event->reveal());
 
+        $event = $this->prophesize('Alchemy\Phrasea\Core\Event\Record\SubDefinitionRebuildEvent');
+        $event->getRecord()->willReturn($record->reveal());
+        $sut->onBuildSubdefs($event->reveal());
 
         $event = $this->prophesize('Alchemy\Phrasea\Core\Event\Record\MetadataChangedEvent');
         $event->getRecord()->willReturn($record->reveal());
-        $sut = new RecordSubscriber($app);
         $sut->onMetadataChange($event->reveal());
 
     }
