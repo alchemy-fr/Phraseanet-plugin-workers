@@ -48,6 +48,7 @@ class SubscriberTest extends \PHPUnit_Framework_TestCase
 
         $event = $this->prophesize('Alchemy\Phrasea\Core\Event\Record\SubDefinitionRebuildEvent');
         $event->getRecord()->willReturn($record->reveal());
+        $event->stopPropagation()->willReturn();
         $sut->onBuildSubdefs($event->reveal());
 
         $event = $this->prophesize('Alchemy\Phrasea\Core\Event\Record\MetadataChangedEvent');
