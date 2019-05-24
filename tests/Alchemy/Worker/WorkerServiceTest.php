@@ -2,6 +2,7 @@
 
 namespace Alchemy\WorkerPlugin\Tests\Worker;
 
+use Alchemy\WorkerPlugin\Worker\AssetsWorker;
 use Alchemy\WorkerPlugin\Worker\ExportMailWorker;
 use Alchemy\WorkerPlugin\Worker\SubdefCreationWorker;
 use Alchemy\WorkerPlugin\Worker\WriteLogsWorker;
@@ -33,5 +34,8 @@ class WorkerServiceTest extends \PHPUnit_Framework_TestCase
 
         $writemetadatasWorker = new WriteMetadatasWorker($app->reveal());
         $this->assertInstanceOf('Alchemy\\WorkerPlugin\\Worker\\WorkerInterface', $writemetadatasWorker);
+
+        $assetsWorker = new AssetsWorker($app->reveal());
+        $this->assertInstanceOf('Alchemy\\WorkerPlugin\\Worker\\WorkerInterface', $assetsWorker);
     }
 }
