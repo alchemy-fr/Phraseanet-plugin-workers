@@ -17,6 +17,7 @@ use Alchemy\Phrasea\Application as PhraseaApplication;
 use Alchemy\WorkerPlugin\Queue\AMQPConnection;
 use Alchemy\WorkerPlugin\Queue\MessageHandler;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
+use Alchemy\WorkerPlugin\Subscriber\AssetsSubscriber;
 use Alchemy\WorkerPlugin\Subscriber\ExportSubscriber;
 use Alchemy\WorkerPlugin\Subscriber\RecordSubscriber;
 use Silex\Application;
@@ -62,6 +63,7 @@ class QueueServiceProvider implements PluginProviderInterface
             $app->extend('dispatcher', function (EventDispatcherInterface $dispatcher, Application $app) {
                 $dispatcher->addSubscriber(new RecordSubscriber($app));
                 $dispatcher->addSubscriber(new ExportSubscriber($app));
+                $dispatcher->addSubscriber(new AssetsSubscriber($app));
 
                 return $dispatcher;
             })

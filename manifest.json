@@ -12,6 +12,9 @@
         },
         {
             "class": "Alchemy\\WorkerPlugin\\Provider\\WorkerServiceProvider"
+        },
+        {
+            "class": "Alchemy\\WorkerPlugin\\Provider\\ControllerServiceProvider"
         }
     ],
     "commands" : [

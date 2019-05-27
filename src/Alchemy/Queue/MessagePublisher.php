@@ -11,12 +11,14 @@ class MessagePublisher
     const LOGS_TYPE            = 'logs';
     const SUBDEF_CREATION_TYPE = 'subdefCreation';
     const WRITE_METADATAs_TYPE = 'writeMetadatas';
+    const ASSETS_INJEST_TYPE   = 'newAssets';
 
     const EXPORT_QUEUE         = 'export-queue';
     const SUBDEF_QUEUE         = 'subdef-queue';
     const METADATAS_QUEUE      = 'metadatas-queue';
     const LOGS_QUEUE           = 'logs-queue';
     const WEBHOOK_QUEUE        = 'webhook-queue';
+    const ASSETS_INJEST_QUEUE  = 'Assets_injest';
 
     private $app;
 
