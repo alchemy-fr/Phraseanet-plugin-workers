@@ -23,7 +23,7 @@ class ControllerServiceProvider extends Api implements PluginProviderInterface
                 ->setJsonBodyHelper(new LazyLocator($app, 'json.body_helper'));
         });
 
-        $app->match('/api/v1/upload/enqueue/', 'controller.api.service:sendAssetsInQueue')
+        $app->post('/api/v1/upload/enqueue/', 'controller.api.service:sendAssetsInQueue')
             ->before(new OAuthListener());
     }
 
