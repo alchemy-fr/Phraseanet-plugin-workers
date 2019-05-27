@@ -2,8 +2,8 @@
 
 namespace Alchemy\WorkerPlugin\Subscriber;
 
-use Alchemy\Phrasea\Core\Event\AssetsCreateEvent;
-use Alchemy\Phrasea\Core\PhraseaEvents;
+use Alchemy\WorkerPlugin\Event\AssetsCreateEvent;
+use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use Silex\Application;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -34,7 +34,7 @@ class AssetsSubscriber implements EventSubscriberInterface
     public static function getSubscribedEvents()
     {
         return [
-            PhraseaEvents::ASSETS_CREATE => 'onCreateAssets',
+            WorkerPluginEvents::ASSETS_CREATE => 'onCreateAssets',
         ];
     }
 }
