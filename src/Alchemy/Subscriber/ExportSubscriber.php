@@ -34,12 +34,17 @@ class ExportSubscriber implements EventSubscriberInterface
         ];
 
         $this->messagePublisher->publishMessage($payload, MessagePublisher::EXPORT_QUEUE);
+
+        $event->stopPropagation();
     }
 
     public static function getSubscribedEvents()
     {
+        //  the method onCreateExportMail listener in higher priority , so it called first and after stop event propagation$
+        //  to avoid to execute phraseanet core listener
+
         return [
-            PhraseaEvents::EXPORT_MAIL_CREATE => 'onCreateExportMail',
+            PhraseaEvents::EXPORT_MAIL_CREATE => ['onCreateExportMail', 10]
         ];
     }
 }
