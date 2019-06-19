@@ -76,7 +76,12 @@ class WorkerServiceProvider implements PluginProviderInterface
         }));
 
         $app['alchemy_service.type_based_worker_resolver']->setFactory(MessagePublisher::ASSETS_INJEST_TYPE, new CallableWorkerFactory(function () use ($app) {
-            return new AssetsWorker($app);
+            return (new AssetsWorker($app))
+                ->setBorderManagerLocator(new LazyLocator($app, 'border-manager'))
+                ->setEntityManagerLocator(new LazyLocator($app, 'orm.em'))
+                ->setFileSystemLocator(new LazyLocator($app, 'filesystem'))
+                ->setTemporaryFileSystemLocator(new LazyLocator($app, 'temporary-filesystem'))
+                ->setDispatcher($app['dispatcher']);
         }));
     }
 

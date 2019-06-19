@@ -18,7 +18,7 @@ class MessagePublisher
     const METADATAS_QUEUE      = 'metadatas-queue';
     const LOGS_QUEUE           = 'logs-queue';
     const WEBHOOK_QUEUE        = 'webhook-queue';
-    const ASSETS_INJEST_QUEUE  = 'Assets_injest';
+    const ASSETS_INJEST_QUEUE  = 'Assets-injest';
 
     private $app;
 
