@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Carrick-Flow\n"
+"Project-Id-Version: Phraseanet-plugin-services\n"
 "POT-Creation-Date: 2018-08-22 17:54+0400\n"
-"PO-Revision-Date: 2019-06-19 14:45+0400\n"
+"PO-Revision-Date: 2019-06-19 17:47+0400\n"
 "Last-Translator: Aina S <asr@esokia-webagency.com>\n"
 "Language-Team: Alchemy <support@alchemy.fr>\n"
 "MIME-Version: 1.0\n"
@@ -20,4 +20,3 @@ msgstr "Phraseanet plugin services"
 
 msgid "configuration_tab"
 msgstr "Configuration"
-
