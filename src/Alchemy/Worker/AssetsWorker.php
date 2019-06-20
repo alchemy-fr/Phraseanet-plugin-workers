@@ -43,13 +43,14 @@ class AssetsWorker implements WorkerInterface
 
 
         $assets = $payload['assets'];
+        $assetToken = $payload['token'];
 
         foreach($assets as $assetId) {
 
             //get asset informations
             $body = $uploaderClient->get('/assets/'.$assetId, [
                 'headers' => [
-                    'Authorization' => 'Bearer '.$uploaderConfig['uploader_access_token']
+                    'Authorization' => 'AssetToken '.$assetToken
                 ]
             ])->getBody()->getContents();
 
@@ -60,7 +61,7 @@ class AssetsWorker implements WorkerInterface
             //download the asset
             $res = $uploaderClient->get('/assets/'.$assetId.'/download', [
                 'headers' => [
-                    'Authorization' => 'Bearer '.$uploaderConfig['uploader_access_token']
+                    'Authorization' => 'AssetToken '.$assetToken
                 ],
                 'save_to' => $tempfile
             ]);

@@ -17,10 +17,6 @@ class WorkerPluginConfigurationType extends AbstractType
                 'label' => 'Url uploader service',
                 'attr' => ['class' => 'input-xxlarge']
             ])
-            ->add('uploader_access_token', TextareaType::class, [
-                'label' => 'Uploader Access Token',
-                'attr' => ['class' => 'input-xxlarge', "rows" => 6]
-            ])
         ;
     }
 

@@ -1,3 +1,2 @@
 worker_plugin:
   url_uploader_service: 'http://localhost:8080'
-  uploader_access_token: 'MmNiNDdhM2U0MzFlMGQzZGM4Y2U0MTNkMzE1OGJiMzE3ZjcxMGVjMzI0NzhhOWJlZjgzZjc4NTdjNzM0ZTVjNw'
