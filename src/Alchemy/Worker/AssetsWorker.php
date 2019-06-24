@@ -3,118 +3,90 @@
 namespace Alchemy\WorkerPlugin\Worker;
 
 use Alchemy\Phrasea\Application\Helper\EntityManagerAware;
-use Alchemy\Phrasea\Application\Helper\BorderManagerAware;
-use Alchemy\Phrasea\Application\Helper\DispatcherAware;
-use Alchemy\Phrasea\Application\Helper\FilesystemAware;
 use Alchemy\Phrasea\Application as PhraseaApplication;
-use Alchemy\Phrasea\Border\File;
-use Alchemy\Phrasea\Border\Manager;
-use Alchemy\Phrasea\Border\Visa;
-use Alchemy\Phrasea\Core\Event\LazaretEvent;
-use Alchemy\Phrasea\Core\Event\RecordEdit;
-use Alchemy\Phrasea\Core\PhraseaEvents;
-use Alchemy\Phrasea\Model\Entities\LazaretFile;
-use Alchemy\Phrasea\Model\Entities\LazaretSession;
-use GuzzleHttp\Client;
+use Alchemy\Phrasea\Model\Entities\StoryWZ;
+use Alchemy\WorkerPlugin\Queue\MessagePublisher;
+
 
 class AssetsWorker implements WorkerInterface
 {
     use EntityManagerAware;
-    use BorderManagerAware;
-    use DispatcherAware;
-    use FilesystemAware;
 
     private $app;
     private $logger;
 
+    /** @var MessagePublisher $messagePublisher */
+    private $messagePublisher;
+
     public function __construct(PhraseaApplication $app)
     {
-        $this->app = $app;
-        $this->logger = $this->app['alchemy_service.logger'];
+        $this->app              = $app;
+        $this->logger           = $this->app['alchemy_service.logger'];
+        $this->messagePublisher = $this->app['alchemy_service.message.publisher'];
     }
 
     public function process(array $payload)
     {
-        //TODO: splite into different queue  to create a record and to create a story
+        //TODO: get is_story from message
 
-        $uploaderConfig = $this->app['worker_plugin.config']['worker_plugin'];
+        // never execute here
+        $isStory = false;
+        $storyId = null;
 
-        $uploaderClient = new Client(['base_uri' => $uploaderConfig['url_uploader_service']]);
+        if($isStory){
 
+            // fixture of base_id an storyname
+            $base_id = 1;
+            $storyName = 'test story queue';
 
-        $assets = $payload['assets'];
-        $assetToken = $payload['token'];
-
-        foreach($assets as $assetId) {
-
-            //get asset informations
-            $body = $uploaderClient->get('/assets/'.$assetId, [
-                'headers' => [
-                    'Authorization' => 'AssetToken '.$assetToken
-                ]
-            ])->getBody()->getContents();
-
-            $body = json_decode($body);
-
-            $tempfile = $this->getTemporaryFilesystem()->createTemporaryFile('download_', null, pathinfo($body->originalName, PATHINFO_EXTENSION));
-
-            //download the asset
-            $res = $uploaderClient->get('/assets/'.$assetId.'/download', [
-                'headers' => [
-                    'Authorization' => 'AssetToken '.$assetToken
-                ],
-                'save_to' => $tempfile
-            ]);
-
-            if($res->getStatusCode() !== 200) {
-                $this->logger->error(sprintf('Error %s downloading "%s"', $res->getStatusCode(), $uploaderConfig['url_uploader_service'].'/assets/'.$assetId.'/download'));
-            }
-
-
-            $lazaretSession = new LazaretSession();
-            //TODO: get a authenticatedUser
-//            $lazaretSession->setUser($this->getAuthenticatedUser());
-
-            $this->getEntityManager()->persist($lazaretSession);
-
-
-            $renamedFilename = $tempfile;
-            $media = $this->app->getMediaFromUri($renamedFilename);
-
-            $base_id = $body->formData->collection_destination;
             $collection = \collection::getByBaseId($this->app, $base_id);
 
-            $packageFile = new File($this->app, $media, $collection, $body->originalName);
+            $story = \record_adapter::createStory($this->app, $collection);
+            $storyId = $story->getRecordId();
 
-            //TODO : treat status and metadata formData
+            $metadatas = [];
 
-            $reasons = [];
-            $elementCreated = null;
-
-            $callback = function ($element, Visa $visa) use (&$reasons, &$elementCreated) {
-                foreach ($visa->getResponses() as $response) {
-                    if (!$response->isOk()) {
-                        $reasons[] = $response->getMessage($this->app['translator']);
-                    }
+            foreach ($collection->get_databox()->get_meta_structure() as $meta) {
+                if ($meta->get_thumbtitle()) {
+                    $value = $storyName;
+                } else {
+                    continue;
                 }
 
-                $elementCreated = $element;
-            };
+                $metadatas[] = [
+                    'meta_struct_id' => $meta->get_id(),
+                    'meta_id'        => null,
+                    'value'          => $value,
+                ];
 
-            $this->getBorderManager()->process( $lazaretSession, $packageFile, $callback, Manager::FORCE_RECORD);
-
-            if ($elementCreated instanceof \record_adapter) {
-                $this->logger->info(sprintf('The record record_id= %1$d was successfully created', $elementCreated->getId()));
-
-                $this->dispatch(PhraseaEvents::RECORD_UPLOAD, new RecordEdit($elementCreated));
-
-            } else {
-                /** @var LazaretFile $elementCreated */
-                $this->dispatch(PhraseaEvents::LAZARET_CREATE, new LazaretEvent($elementCreated));
-
-                $this->logger->info('The file was moved to the quarantine');
+                break;
             }
 
+            $story->set_metadatas($metadatas)->rebuild_subdefs();
+
+            $storyWZ = new StoryWZ();
+            //TODO : get a authenticated user from the message
+//            $storyWZ->setUser($this->getAuthenticatedUser());
+//            $storyWZ->setUser($this->app['repo.users']->find(1));
+            $storyWZ->setRecord($story);
+
+            $entityManager = $this->getEntityManager();
+            $entityManager->persist($storyWZ);
+            $entityManager->flush();
+        }
+
+        $assets = $payload['assets'];
+
+        foreach($assets as $assetId) {
+            $createRecordMessage['message_type'] = MessagePublisher::CREATE_RECORD_TYPE;
+            $createRecordMessage['payload'] = [
+                'asset'      => $assetId,
+                'publisher'  => $payload['publisher'],
+                'assetToken' => $payload['token'],
+                'storyId'    => $storyId
+            ];
+
+            $this->messagePublisher->publishMessage($createRecordMessage, MessagePublisher::CREATE_RECORD_QUEUE);
         }
     }
 }

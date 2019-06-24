@@ -28,7 +28,10 @@ class SubdefCreationWorker implements WorkerInterface
             /** @var SubdefGenerator $subdefGenerator */
             $subdefGenerator = $this->app['subdef.generator'];
 
-            $subdefGenerator->generateSubdefs($record);
+            if(!$record->isStory()){
+                $subdefGenerator->generateSubdefs($record);
+            }
+
         }
     }
 }
