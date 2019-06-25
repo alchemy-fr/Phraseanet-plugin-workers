@@ -29,7 +29,7 @@ class AdminConfigurationController extends Controller
             return $app->redirectPath('admin_plugins_list');
         }
 
-        return $app['twig']->render('phraseanet-plugin-services/admin/worker_plugin_configuration.html.twig',[
+        return $app['twig']->render('phraseanet-plugin-workers/admin/worker_plugin_configuration.html.twig',[
             'form' => $form->createView()
         ]);
     }

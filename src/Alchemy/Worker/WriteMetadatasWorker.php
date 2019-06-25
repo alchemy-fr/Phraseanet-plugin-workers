@@ -4,6 +4,7 @@ namespace Alchemy\WorkerPlugin\Worker;
 
 use Alchemy\Phrasea\Application\Helper\ApplicationBoxAware;
 use Alchemy\Phrasea\Metadata\TagFactory;
+use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use Monolog\Logger;
 use PHPExiftool\Driver\Metadata\Metadata;
 use PHPExiftool\Driver\Metadata\MetadataBag;
@@ -23,10 +24,14 @@ class WriteMetadatasWorker implements WorkerInterface
     /** @var Logger  */
     private $log;
 
+    /** @var MessagePublisher $messagePublisher */
+    private $messagePublisher;
+
     public function __construct(Application $app)
     {
         $this->app = $app;
         $this->log = $this->app['alchemy_service.logger'];
+        $this->messagePublisher = $this->app['alchemy_service.message.publisher'];
     }
 
     public function process(array $payload)
@@ -146,7 +151,7 @@ class WriteMetadatasWorker implements WorkerInterface
                 try {
                     $writer->write($file, $metadata);
 
-                    $this->log->info(sprintf('meta written for sbasid=%1$d - recordid=%2$d (%3$s)', $databox->get_sbas_id(), $recordId, $name));
+                    $this->messagePublisher->pushLog(sprintf('meta written for sbasid=%1$d - recordid=%2$d (%3$s)', $databox->get_sbas_id(), $recordId, $name));
                 } catch (PHPExiftoolException $e) {
                     $this->log->error(sprintf('meta NOT written for sbasid=%1$d - recordid=%2$d (%3$s) because "%s"', $databox->get_sbas_id(), $recordId, $name, $e->getMessage()));
                 }

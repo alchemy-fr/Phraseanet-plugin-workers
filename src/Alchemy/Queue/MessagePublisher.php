@@ -47,4 +47,14 @@ class MessagePublisher
     {
         $this->app['alchemy_service.amqp.connection']->connectionClose();
     }
+
+    /**
+     * @param $message
+     */
+    public function pushLog($message)
+    {
+        $data['message_type'] = self::LOGS_TYPE;
+        $data['payload']['message'] = $message;
+        $this->publishMessage($data, self::LOGS_QUEUE);
+    }
 }

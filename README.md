@@ -1,4 +1,4 @@
-# Phraseanet-plugin-services
+# Phraseanet-plugin-workers
 This is the repository for worker services in 4.1 PHRAS-2435
 
 ##To install
@@ -36,6 +36,14 @@ This is the repository for worker services in 4.1 PHRAS-2435
 Authentification required
 
 required Parameters:  assets , publisher, token
+
+####Reserved word used
+- metadata
+- collection_destination
+- is_story
+- statusbit
+- phraseanet_submiter_email
+- phraseanet_user_submiter_id
 
 #### Admin plugin Configuration
 

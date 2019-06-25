@@ -25,7 +25,7 @@ class ControllerServiceProvider extends Api implements PluginProviderInterface
      */
     public function register(Application $app)
     {
-        $app['worker_plugin.name'] = 'phraseanet-plugin-services';
+        $app['worker_plugin.name'] = 'phraseanet-plugin-workers';
         $app['worker_plugin.version'] = '1.0.0';
 
         $app['worker_plugin.config'] = $app->share(function (Application $app) {

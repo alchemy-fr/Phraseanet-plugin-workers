@@ -43,10 +43,10 @@ class MessageHandler
                 $channel->basic_ack($message->delivery_info['delivery_tag']);
 
                 if ($data['message_type'] !==  MessagePublisher::LOGS_TYPE) {
-                    $data['payload']['message'] = $data['message_type'].' have been consumed!';
-                    $data['message_type'] = MessagePublisher::LOGS_TYPE;
+                    $oldPayload = $data['payload'];
+                    $message = $data['message_type'].' to be consumed! >> Payload ::'. json_encode($oldPayload);
 
-                    $publisher->publishMessage($data, MessagePublisher::LOGS_QUEUE);
+                    $publisher->pushLog($message);
                 }
             } catch (\Exception $e) {
                 $channel->basic_nack($message->delivery_info['delivery_tag']);

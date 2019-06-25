@@ -11,7 +11,7 @@ class Config
         $manifest_name = json_decode(file_get_contents(realpath(dirname(__FILE__)) . "/../../../manifest.json"))->name;
         $config_dir = realpath(dirname(__FILE__) . "/../../../../../config") . "/plugins/" . $manifest_name;
 
-        if(!is_dir($config_dir)){
+        if (!is_dir($config_dir)) {
             mkdir($config_dir, 0777, true);
         }
 
