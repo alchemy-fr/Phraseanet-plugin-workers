@@ -32,19 +32,14 @@ class SubdefCreationWorker implements WorkerInterface
 
             /** @var SubdefGenerator $subdefGenerator */
             $subdefGenerator = $this->app['subdef.generator'];
+            $oldLogger = $subdefGenerator->getLogger();
 
             if(!$record->isStory()){
-                $start = microtime(true);
+                $subdefGenerator->setLogger($this->app['alchemy_service.logger']);
 
                 $subdefGenerator->generateSubdefs($record);
 
-                $stop = microtime(true);
-                $duration = $stop - $start;
-
-                $this->messagePublisher->pushLog(sprintf("subdefCreation done for record_id= %d , duration = %s",
-                    $record->getRecordId(),
-                    date('H:i:s', mktime(0,0, $duration))
-                ));
+                $subdefGenerator->setLogger($oldLogger);
             }
 
         }

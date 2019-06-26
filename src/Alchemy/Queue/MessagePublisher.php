@@ -53,8 +53,11 @@ class MessagePublisher
      */
     public function pushLog($message)
     {
-        $data['message_type'] = self::LOGS_TYPE;
-        $data['payload']['message'] = $message;
-        $this->publishMessage($data, self::LOGS_QUEUE);
+//        $data['message_type'] = self::LOGS_TYPE;
+//        $data['payload']['message'] = $message;
+//        $this->publishMessage($data, self::LOGS_QUEUE);
+
+        // write logs directly in file
+        $this->app['alchemy_service.logger']->info($message);
     }
 }

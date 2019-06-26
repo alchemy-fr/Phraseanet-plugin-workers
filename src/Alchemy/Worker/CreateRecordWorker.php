@@ -148,14 +148,14 @@ class CreateRecordWorker implements WorkerInterface
         $this->getBorderManager()->process( $lazaretSession, $packageFile, $callback);
 
         if ($elementCreated instanceof \record_adapter) {
-            $stop = microtime(true);
-            if ($start) {
-                $duration = $stop - $start;
-                $this->messagePublisher->pushLog(sprintf('The record record_id= %d was successfully created, duration= %s',
-                    $elementCreated->getRecordId(),
-                    date('H:i:s', mktime(0,0, $duration))
-                    ));
-            }
+//            $stop = microtime(true);
+//            if ($start) {
+//                $duration = $stop - $start;
+//                $this->messagePublisher->pushLog(sprintf('The record record_id= %d was successfully created, duration= %s',
+//                    $elementCreated->getRecordId(),
+//                    date('H:i:s', mktime(0,0, $duration))
+//                    ));
+//            }
 
             $this->dispatch(PhraseaEvents::RECORD_UPLOAD, new RecordEdit($elementCreated));
 

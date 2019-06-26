@@ -26,7 +26,6 @@ class AssetsWorker implements WorkerInterface
 
     public function process(array $payload)
     {
-        $start = microtime(true);
         $assets = $payload['assets'];
 
         $uploaderConfig = $this->app['worker_plugin.config']['worker_plugin'];
@@ -47,17 +46,6 @@ class AssetsWorker implements WorkerInterface
 
         if (!empty($body['formData']['is_story'])) {
             $storyId = $this->createStory($body);
-            $stop = microtime(true);
-
-            if ($start) {
-                $duration = $stop - $start;
-
-                $messageLog = sprintf("A story story_id = %d created, duration = %s",
-                    $storyId,
-                    date('H:i:s', mktime(0,0, $duration))
-                );
-                $this->messagePublisher->pushLog($messageLog);
-            }
         }
 
         foreach($assets as $assetId) {

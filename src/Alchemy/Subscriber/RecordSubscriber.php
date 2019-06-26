@@ -41,15 +41,23 @@ class RecordSubscriber implements EventSubscriberInterface
 
     public function onRecordCreated(RecordEvent $event)
     {
-        $payload = [
-            'message_type' => MessagePublisher::SUBDEF_CREATION_TYPE,
-            'payload' => [
-                'recordId'  => $event->getRecord()->getRecordId(),
-                'databoxId' => $event->getRecord()->getDataboxId()
-            ]
-        ];
+        $this->messagePublisher->pushLog(sprintf('The %s= %d was successfully created',
+            ($event->getRecord()->isStory() ? "story story_id" : "record record_id"),
+            $event->getRecord()->getRecordId()
+        ));
 
-        $this->messagePublisher->publishMessage($payload, MessagePublisher::SUBDEF_QUEUE);
+        if (!$event->getRecord()->isStory()) {
+            $payload = [
+                'message_type' => MessagePublisher::SUBDEF_CREATION_TYPE,
+                'payload' => [
+                    'recordId'  => $event->getRecord()->getRecordId(),
+                    'databoxId' => $event->getRecord()->getDataboxId()
+                ]
+            ];
+
+            $this->messagePublisher->publishMessage($payload, MessagePublisher::SUBDEF_QUEUE);
+        }
+
     }
 
     public function onMetadataChange(MetadataChangedEvent $event)
