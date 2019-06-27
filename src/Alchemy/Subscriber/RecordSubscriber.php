@@ -6,6 +6,7 @@ use Alchemy\Phrasea\Core\Event\Record\MetadataChangedEvent;
 use Alchemy\Phrasea\Core\Event\Record\RecordEvent;
 use Alchemy\Phrasea\Core\Event\Record\RecordEvents;
 use Alchemy\Phrasea\Core\Event\Record\SubDefinitionRebuildEvent;
+use Alchemy\Phrasea\Databox\Subdef\MediaSubdefRepository;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use Silex\Application;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -62,15 +63,19 @@ class RecordSubscriber implements EventSubscriberInterface
 
     public function onMetadataChange(MetadataChangedEvent $event)
     {
-        $payload = [
-            'message_type' => MessagePublisher::WRITE_METADATAs_TYPE,
-            'payload' => [
-                'recordId'  => $event->getRecord()->getRecordId(),
-                'databoxId' => $event->getRecord()->getDataboxId()
-            ]
-        ];
+        $subdefs = $this->getMediaSubdefRepository($event->getRecord()->getDataboxId())->findByRecordIdsAndNames([$event->getRecord()->getRecordId()]);
 
-        $this->messagePublisher->publishMessage($payload, MessagePublisher::METADATAS_QUEUE);
+        if (count($subdefs) > 1 || $event->getRecord()->isStory()) {
+            $payload = [
+                'message_type' => MessagePublisher::WRITE_METADATAs_TYPE,
+                'payload' => [
+                    'recordId'  => $event->getRecord()->getRecordId(),
+                    'databoxId' => $event->getRecord()->getDataboxId()
+                ]
+            ];
+
+            $this->messagePublisher->publishMessage($payload, MessagePublisher::METADATAS_QUEUE);
+        }
     }
 
     public static function getSubscribedEvents()
@@ -84,4 +89,12 @@ class RecordSubscriber implements EventSubscriberInterface
             RecordEvents::METADATA_CHANGED          => 'onMetadataChange',
         ];
     }
+
+    /**
+     * @return MediaSubdefRepository
+     */
+    private function getMediaSubdefRepository($databoxId)
+{
+    return $this->app['provider.repo.media_subdef']->getRepositoryForDatabox($databoxId);
+}
 }

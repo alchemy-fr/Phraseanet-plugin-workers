@@ -11,8 +11,10 @@ use Alchemy\Phrasea\Border\Attribute\MetaField;
 use Alchemy\Phrasea\Border\Attribute\Status;
 use Alchemy\Phrasea\Border\File;
 use Alchemy\Phrasea\Border\Visa;
+use Alchemy\Phrasea\Core\Event\LazaretEvent;
 use Alchemy\Phrasea\Core\Event\RecordEdit;
 use Alchemy\Phrasea\Core\PhraseaEvents;
+use Alchemy\Phrasea\Model\Entities\LazaretFile;
 use Alchemy\Phrasea\Model\Entities\LazaretSession;
 use Alchemy\Phrasea\Model\Entities\User;
 use Alchemy\Phrasea\Model\Repositories\UserRepository;
@@ -148,19 +150,11 @@ class CreateRecordWorker implements WorkerInterface
         $this->getBorderManager()->process( $lazaretSession, $packageFile, $callback);
 
         if ($elementCreated instanceof \record_adapter) {
-//            $stop = microtime(true);
-//            if ($start) {
-//                $duration = $stop - $start;
-//                $this->messagePublisher->pushLog(sprintf('The record record_id= %d was successfully created, duration= %s',
-//                    $elementCreated->getRecordId(),
-//                    date('H:i:s', mktime(0,0, $duration))
-//                    ));
-//            }
-
             $this->dispatch(PhraseaEvents::RECORD_UPLOAD, new RecordEdit($elementCreated));
-
         } else {
             $this->messagePublisher->pushLog(sprintf('The file was moved to the quarantine: %s', json_encode($reasons)));
+            /** @var LazaretFile $elementCreated */
+            $this->dispatch(PhraseaEvents::LAZARET_CREATE, new LazaretEvent($elementCreated));
         }
 
         // add record in a story if story is defined
@@ -173,7 +167,7 @@ class CreateRecordWorker implements WorkerInterface
 
     /**
      * @param $user
-     * @param $elementCreated
+     * @param \record_adapter $elementCreated
      * @param $sbasId
      * @param $storyId
      */
@@ -189,6 +183,29 @@ class CreateRecordWorker implements WorkerInterface
 
         if (!$story->hasChild($elementCreated)) {
             $story->appendChild($elementCreated);
+
+            if (count($story->getChildren()) == 1) {
+                // add a title to the story
+                $metadatas = [];
+
+                foreach ($story->getDatabox()->get_meta_structure() as $meta) {
+                    if ($meta->get_thumbtitle()) {
+                        $value = $elementCreated->getTitle();
+                    } else {
+                        continue;
+                    }
+
+                    $metadatas[] = [
+                        'meta_struct_id' => $meta->get_id(),
+                        'meta_id'        => null,
+                        'value'          => $value,
+                    ];
+
+                    break;
+                }
+
+                $story->set_metadatas($metadatas)->rebuild_subdefs();
+            }
 
             $this->messagePublisher->pushLog(sprintf('The record record_id= %d was successfully added in the story record_id= %d', $elementCreated->getRecordId(), $story->getRecordId()));
             $this->dispatch(PhraseaEvents::RECORD_EDIT, new RecordEdit($story));
@@ -213,4 +230,5 @@ class CreateRecordWorker implements WorkerInterface
 
         return $aclProvider->get($user);
     }
+
 }

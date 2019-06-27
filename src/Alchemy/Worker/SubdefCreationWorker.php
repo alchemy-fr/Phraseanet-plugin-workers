@@ -3,6 +3,8 @@
 namespace Alchemy\WorkerPlugin\Worker;
 
 use Alchemy\Phrasea\Application\Helper\ApplicationBoxAware;
+use Alchemy\Phrasea\Core\Event\Record\MetadataChangedEvent;
+use Alchemy\Phrasea\Core\Event\Record\RecordEvents;
 use Alchemy\Phrasea\Media\SubdefGenerator;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use Silex\Application;
@@ -34,12 +36,14 @@ class SubdefCreationWorker implements WorkerInterface
             $subdefGenerator = $this->app['subdef.generator'];
             $oldLogger = $subdefGenerator->getLogger();
 
-            if(!$record->isStory()){
+            if (!$record->isStory()) {
                 $subdefGenerator->setLogger($this->app['alchemy_service.logger']);
 
                 $subdefGenerator->generateSubdefs($record);
 
                 $subdefGenerator->setLogger($oldLogger);
+
+                $this->app['dispatcher']->dispatch(RecordEvents::METADATA_CHANGED, new MetadataChangedEvent($record));
             }
 
         }
