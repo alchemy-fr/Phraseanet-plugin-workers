@@ -2,6 +2,7 @@
 
 namespace Alchemy\WorkerPlugin\Worker;
 
+use Alchemy\Phrasea\Application\Helper\ApplicationBoxAware;
 use Alchemy\Phrasea\Application\Helper\EntityManagerAware;
 use Alchemy\Phrasea\Application\Helper\BorderManagerAware;
 use Alchemy\Phrasea\Application\Helper\DispatcherAware;
@@ -12,8 +13,11 @@ use Alchemy\Phrasea\Border\Attribute\Status;
 use Alchemy\Phrasea\Border\File;
 use Alchemy\Phrasea\Border\Visa;
 use Alchemy\Phrasea\Core\Event\LazaretEvent;
+use Alchemy\Phrasea\Core\Event\Record\RecordEvents;
+use Alchemy\Phrasea\Core\Event\Record\StoryCoverChangedEvent;
 use Alchemy\Phrasea\Core\Event\RecordEdit;
 use Alchemy\Phrasea\Core\PhraseaEvents;
+use Alchemy\Phrasea\Media\SubdefSubstituer;
 use Alchemy\Phrasea\Model\Entities\LazaretFile;
 use Alchemy\Phrasea\Model\Entities\LazaretSession;
 use Alchemy\Phrasea\Model\Entities\User;
@@ -24,6 +28,7 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class CreateRecordWorker implements WorkerInterface
 {
+    use ApplicationBoxAware;
     use EntityManagerAware;
     use BorderManagerAware;
     use DispatcherAware;
@@ -44,7 +49,6 @@ class CreateRecordWorker implements WorkerInterface
 
     public function process(array $payload)
     {
-        $start = microtime(true);
         $uploaderConfig = $this->app['worker_plugin.config']['worker_plugin'];
 
         $uploaderClient = new Client(['base_uri' => $uploaderConfig['url_uploader_service']]);
@@ -147,7 +151,7 @@ class CreateRecordWorker implements WorkerInterface
             $elementCreated = $element;
         };
 
-        $this->getBorderManager()->process( $lazaretSession, $packageFile, $callback);
+        $this->getBorderManager()->process($lazaretSession, $packageFile, $callback);
 
         if ($elementCreated instanceof \record_adapter) {
             $this->dispatch(PhraseaEvents::RECORD_UPLOAD, new RecordEdit($elementCreated));
@@ -163,6 +167,37 @@ class CreateRecordWorker implements WorkerInterface
             $this->addRecordInStory($user, $elementCreated, $sbasId, $payload['storyId']);
         }
 
+    }
+
+    /**
+     * @param string $data  databoxId_storyId_recordId
+     */
+    public function setStoryCover($data)
+    {
+        // get databoxId , storyId and recordId
+        $tData = explode('_', $data);
+
+        $record = $this->findDataboxById($tData[0])->get_record($tData[2]);
+
+        $story =  $this->findDataboxById($tData[0])->get_record( $tData[1]);
+
+        $subdefChanged = false;
+        foreach ($record->get_subdefs() as $name => $value) {
+            if (!in_array($name, array('thumbnail', 'preview'))) {
+                continue;
+            }
+
+            $media = $this->app->getMediaFromUri($value->getRealPath());
+            $this->getSubdefSubstituer()->substituteSubdef($story, $name, $media);  // name = thumbnail | preview
+            $subdefChanged = true;
+        }
+
+        if ($subdefChanged) {
+            $this->dispatch(RecordEvents::STORY_COVER_CHANGED, new StoryCoverChangedEvent($story, $record));
+            $this->dispatch(PhraseaEvents::RECORD_EDIT, new RecordEdit($story));
+
+            $this->messagePublisher->pushLog(sprintf("Cover set for story story_id= %d with the record record_id = %d", $story->getRecordId(), $record->getRecordId()));
+        }
     }
 
     /**
@@ -184,7 +219,7 @@ class CreateRecordWorker implements WorkerInterface
         if (!$story->hasChild($elementCreated)) {
             $story->appendChild($elementCreated);
 
-            if (count($story->getChildren()) == 1) {
+            if (SubdefCreationWorker::checkIfFirstChild($story, $elementCreated)) {
                 // add a title to the story
                 $metadatas = [];
 
@@ -205,6 +240,8 @@ class CreateRecordWorker implements WorkerInterface
                 }
 
                 $story->set_metadatas($metadatas)->rebuild_subdefs();
+
+                $data = implode('_', [$story->getDataboxId(), $storyId, $elementCreated->getRecordId()]);
             }
 
             $this->messagePublisher->pushLog(sprintf('The record record_id= %d was successfully added in the story record_id= %d', $elementCreated->getRecordId(), $story->getRecordId()));
@@ -231,4 +268,11 @@ class CreateRecordWorker implements WorkerInterface
         return $aclProvider->get($user);
     }
 
+    /**
+     * @return SubdefSubstituer
+     */
+    private function getSubdefSubstituer()
+    {
+        return $this->app['subdef.substituer'];
+    }
 }

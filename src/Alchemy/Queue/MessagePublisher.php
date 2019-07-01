@@ -22,6 +22,8 @@ class MessagePublisher
     const ASSETS_INJEST_QUEUE  = 'assets-injest';
     const CREATE_RECORD_QUEUE  = 'createrecord-queue';
 
+    const NEW_RECORD_MESSAGE   = 'newrecord';
+
     private $app;
 
     public function __construct(Application $app)

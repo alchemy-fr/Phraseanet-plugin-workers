@@ -83,6 +83,7 @@ class WorkerServiceProvider implements PluginProviderInterface
 
         $app['alchemy_service.type_based_worker_resolver']->setFactory(MessagePublisher::CREATE_RECORD_TYPE, new CallableWorkerFactory(function () use ($app) {
             return (new CreateRecordWorker($app))
+                ->setApplicationBox($app['phraseanet.appbox'])
                 ->setBorderManagerLocator(new LazyLocator($app, 'border-manager'))
                 ->setEntityManagerLocator(new LazyLocator($app, 'orm.em'))
                 ->setFileSystemLocator(new LazyLocator($app, 'filesystem'))
