@@ -164,7 +164,7 @@ class CreateRecordWorker implements WorkerInterface
         // add record in a story if story is defined
 
         if (is_int($payload['storyId']) && $elementCreated instanceof \record_adapter) {
-            $this->addRecordInStory($user, $elementCreated, $sbasId, $payload['storyId']);
+            $this->addRecordInStory($user, $elementCreated, $sbasId, $payload['storyId'], $body['formData']);
         }
 
     }
@@ -205,8 +205,9 @@ class CreateRecordWorker implements WorkerInterface
      * @param \record_adapter $elementCreated
      * @param $sbasId
      * @param $storyId
+     * @param $formData
      */
-    private function addRecordInStory($user, $elementCreated, $sbasId, $storyId)
+    private function addRecordInStory($user, $elementCreated, $sbasId, $storyId, $formData)
     {
         $story = new \record_adapter($this->app, $sbasId, $storyId);
 
@@ -220,28 +221,23 @@ class CreateRecordWorker implements WorkerInterface
             $story->appendChild($elementCreated);
 
             if (SubdefCreationWorker::checkIfFirstChild($story, $elementCreated)) {
-                // add a title to the story
+                // add metadata to the story
                 $metadatas = [];
+                foreach ($formData as $key => $value) {
+                    if (strstr($key, 'metadata')) {
+                        $tMeta = explode('-', $key);
 
-                foreach ($story->getDatabox()->get_meta_structure() as $meta) {
-                    if ($meta->get_thumbtitle()) {
-                        $value = $elementCreated->getTitle();
-                    } else {
-                        continue;
+                        $metaField = $elementCreated->getDatabox()->get_meta_structure()->get_element($tMeta[1]);
+
+                        $metadatas[] = [
+                            'meta_struct_id' => $metaField->get_id(),
+                            'meta_id'        => null,
+                            'value'          => $value,
+                        ];
                     }
-
-                    $metadatas[] = [
-                        'meta_struct_id' => $meta->get_id(),
-                        'meta_id'        => null,
-                        'value'          => $value,
-                    ];
-
-                    break;
                 }
 
                 $story->set_metadatas($metadatas)->rebuild_subdefs();
-
-                $data = implode('_', [$story->getDataboxId(), $storyId, $elementCreated->getRecordId()]);
             }
 
             $this->messagePublisher->pushLog(sprintf('The record record_id= %d was successfully added in the story record_id= %d', $elementCreated->getRecordId(), $story->getRecordId()));

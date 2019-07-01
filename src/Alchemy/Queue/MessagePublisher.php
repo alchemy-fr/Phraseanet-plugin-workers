@@ -19,7 +19,7 @@ class MessagePublisher
     const METADATAS_QUEUE      = 'metadatas-queue';
     const LOGS_QUEUE           = 'logs-queue';
     const WEBHOOK_QUEUE        = 'webhook-queue';
-    const ASSETS_INJEST_QUEUE  = 'assets-injest';
+    const ASSETS_INJEST_QUEUE  = 'injest-queue';
     const CREATE_RECORD_QUEUE  = 'createrecord-queue';
 
     const NEW_RECORD_MESSAGE   = 'newrecord';
