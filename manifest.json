@@ -1,11 +1,12 @@
 {
-    "name": "phraseanet-plugin-services",
-    "description" : "Phraseanet plugin services",
+    "name": "phraseanet-plugin-workers",
+    "description" : "Phraseanet plugin workers",
     "keywords"    : ["service","worker"],
     "license"     : "MIT",
     "version"     : "1.0.0",
     "minimum-phraseanet-version": "4",
     "maximum-phraseanet-version": "4.1.100",
+    "twig-paths": ["views"],
     "services" : [
         {
             "class": "Alchemy\\WorkerPlugin\\Provider\\QueueServiceProvider"

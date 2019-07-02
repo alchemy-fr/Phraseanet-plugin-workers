@@ -1,6 +1,6 @@
 {
-    "name"        : "phraseanet plugin services",
-    "description" : "Phraseanet plugin services",
+    "name"        : "phraseanet plugin workers",
+    "description" : "Phraseanet plugin workers",
     "license"     : "MIT",
     "require": {
         "php-amqplib/php-amqplib": "^2.9"

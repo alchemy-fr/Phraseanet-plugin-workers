@@ -9,10 +9,14 @@
     },
     "publisher": {
       "type": "string"
+    },
+    "token": {
+      "type": "string"
     }
   },
   "required": [
     "assets",
-    "publisher"
+    "publisher",
+    "token"
   ]
 }

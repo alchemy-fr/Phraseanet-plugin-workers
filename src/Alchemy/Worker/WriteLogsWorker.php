@@ -16,7 +16,6 @@ class WriteLogsWorker implements WorkerInterface
     public function process(array $payload)
     {
         $message = $payload['message'];
-        unset($payload['message']);
-        $this->app['alchemy_service.logger']->info($message . ' >> Payload :: ' .json_encode($payload));
+        $this->app['alchemy_service.logger']->info($message);
     }
 }

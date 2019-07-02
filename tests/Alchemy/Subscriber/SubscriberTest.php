@@ -26,12 +26,21 @@ class SubscriberTest extends \PHPUnit_Framework_TestCase
     public function testIfPublisheMessageOnSubscribeEvent()
     {
         $app = new Application(Application::ENV_TEST);
+        $subdefRepository = $this->prophesize('Alchemy\Phrasea\Databox\Subdef\MediaSubdefRepository');
 
         $app['alchemy_service.message.publisher'] = $this->getMockBuilder('Alchemy\WorkerPlugin\Queue\MessagePublisher')
             ->disableOriginalConstructor()
             ->getMock();
 
+        $app['provider.repo.media_subdef'] = $this->getMockBuilder('Alchemy\Phrasea\Databox\DataboxBoundRepositoryProvider')
+            ->disableOriginalConstructor()
+            ->getMock();
+
+
         $app['alchemy_service.message.publisher']->expects($this->atLeastOnce())->method('publishMessage');
+        $app['provider.repo.media_subdef']->expects($this->any())
+            ->method('getMediaSubdefRepository')
+            ->will($this->returnValue($subdefRepository->reveal()));
 
 
         $event = $this->prophesize('Alchemy\Phrasea\Core\Event\ExportMailEvent');
@@ -54,6 +63,5 @@ class SubscriberTest extends \PHPUnit_Framework_TestCase
         $event = $this->prophesize('Alchemy\Phrasea\Core\Event\Record\MetadataChangedEvent');
         $event->getRecord()->willReturn($record->reveal());
         $sut->onMetadataChange($event->reveal());
-
     }
 }

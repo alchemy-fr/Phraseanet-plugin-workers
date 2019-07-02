@@ -7,6 +7,7 @@ use Alchemy\Phrasea\Core\LazyLocator;
 use Alchemy\Phrasea\Plugin\PluginProviderInterface;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use Alchemy\WorkerPlugin\Worker\AssetsWorker;
+use Alchemy\WorkerPlugin\Worker\CreateRecordWorker;
 use Alchemy\WorkerPlugin\Worker\ExportMailWorker;
 use Alchemy\WorkerPlugin\Worker\Factory\CallableWorkerFactory;
 use Alchemy\WorkerPlugin\Worker\ProcessPool;
@@ -76,7 +77,18 @@ class WorkerServiceProvider implements PluginProviderInterface
         }));
 
         $app['alchemy_service.type_based_worker_resolver']->setFactory(MessagePublisher::ASSETS_INJEST_TYPE, new CallableWorkerFactory(function () use ($app) {
-            return new AssetsWorker($app);
+            return (new AssetsWorker($app))
+                ->setEntityManagerLocator(new LazyLocator($app, 'orm.em'));
+        }));
+
+        $app['alchemy_service.type_based_worker_resolver']->setFactory(MessagePublisher::CREATE_RECORD_TYPE, new CallableWorkerFactory(function () use ($app) {
+            return (new CreateRecordWorker($app))
+                ->setApplicationBox($app['phraseanet.appbox'])
+                ->setBorderManagerLocator(new LazyLocator($app, 'border-manager'))
+                ->setEntityManagerLocator(new LazyLocator($app, 'orm.em'))
+                ->setFileSystemLocator(new LazyLocator($app, 'filesystem'))
+                ->setTemporaryFileSystemLocator(new LazyLocator($app, 'temporary-filesystem'))
+                ->setDispatcher($app['dispatcher']);
         }));
     }
 
