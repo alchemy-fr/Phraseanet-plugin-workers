@@ -1,11 +1,11 @@
 # Phraseanet-plugin-workers
 This is the repository for worker services in 4.1 PHRAS-2435
 
-##To install
+## To install
 
 `bin/setup plugin:add ./plugin/path`
 
-##To listen queues and launch corresponding service
+## To listen queues and launch corresponding service
 
 `bin/console worker:execute`
 
@@ -19,7 +19,7 @@ This is the repository for worker services in 4.1 PHRAS-2435
  -m                   The max number of process allow to run ( default 4)
  ```
 
-####List of queues to be created
+#### List of queues to be created
 
 - export-queue
 - subdef-queue
@@ -29,7 +29,7 @@ This is the repository for worker services in 4.1 PHRAS-2435
 - createrecord-queue
 - injest-queue
 
-####Route added
+#### Route added
 
 - POST /api/v1/upload/enqueue/
 
@@ -37,7 +37,7 @@ Authentification required
 
 required Parameters:  assets , publisher, token
 
-####Reserved word used
+#### Reserved word used
 - metadata
 - collection_destination
 - is_story
