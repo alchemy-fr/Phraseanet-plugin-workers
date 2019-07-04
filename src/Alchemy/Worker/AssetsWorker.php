@@ -28,10 +28,7 @@ class AssetsWorker implements WorkerInterface
     {
         $assets = $payload['assets'];
 
-        $uploaderConfig = $this->app['worker_plugin.config']['worker_plugin'];
-
-        $uploaderClient = new Client(['base_uri' => $uploaderConfig['url_uploader_service']]);
-
+        $uploaderClient = new Client(['base_uri' => $payload['base_url']]);
 
         //get first asset informations to check if it's a story
         $body = $uploaderClient->get('/assets/'.$assets[0], [
@@ -54,7 +51,8 @@ class AssetsWorker implements WorkerInterface
                 'asset'      => $assetId,
                 'publisher'  => $payload['publisher'],
                 'assetToken' => $payload['token'],
-                'storyId'    => $storyId
+                'storyId'    => $storyId,
+                'base_url'   => $payload['base_url']
             ];
 
             $this->messagePublisher->publishMessage($createRecordMessage, MessagePublisher::CREATE_RECORD_QUEUE);
