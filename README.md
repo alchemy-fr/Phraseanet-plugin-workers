@@ -44,3 +44,7 @@ required Parameters:  assets , publisher, token
 - statusbit
 - phraseanet_submiter_email
 - phraseanet_user_submiter_id
+
+#### Admin plugin Configuration
+
+Need to setup the Url uploader service in the phraseanet admin plugin to use the plugin with the uploader service.

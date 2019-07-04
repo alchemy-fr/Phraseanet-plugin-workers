@@ -1,0 +1,14 @@
+<h3> Configuration Worker-Plugin</h3>
+
+{{ form_start(form, {'action': path('worker_plugin_admin_configuration')}) }}
+
+<div class="control-group">
+    {{ form_row(form.url_uploader_service) }}
+</div>
+
+<div class="control-group">
+    <input type="submit" class="btn btn-primary" value={{ "Save"|trans }} />
+</div>
+
+
+{{ form_end(form) }}
