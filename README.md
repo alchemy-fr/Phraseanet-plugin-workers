@@ -35,7 +35,7 @@ This is the repository for worker services in 4.1 PHRAS-2435
 
 Authentification required
 
-required Parameters:  assets , publisher, token
+required Parameters:  assets , publisher, token, base_url
 
 #### Reserved word used
 - metadata
@@ -47,4 +47,4 @@ required Parameters:  assets , publisher, token
 
 #### Admin plugin Configuration
 
-Need to setup the Url uploader service in the phraseanet admin plugin to use the plugin with the uploader service.
+Plugin setup
