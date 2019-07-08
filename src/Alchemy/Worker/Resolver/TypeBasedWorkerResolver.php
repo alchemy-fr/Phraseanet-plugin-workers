@@ -18,7 +18,7 @@ class TypeBasedWorkerResolver implements WorkerResolverInterface
      */
     private $factories = [];
 
-    public function setFactory($messageType, WorkerFactoryInterface $workerFactory)
+    public function addFactory($messageType, WorkerFactoryInterface $workerFactory)
     {
         $this->factories[$messageType] = $workerFactory;
     }

@@ -26,7 +26,7 @@ class TypeBasedWorkerResolverTest extends \PHPUnit_Framework_TestCase
 
         $sut = new TypeBasedWorkerResolver();
 
-        $sut->setFactory(MessagePublisher::SUBDEF_CREATION_TYPE, $workerFactory);
+        $sut->addFactory(MessagePublisher::SUBDEF_CREATION_TYPE, $workerFactory);
 
         $this->assertContainsOnlyInstancesOf(WorkerFactoryInterface::class, $sut->getFactories());
     }
@@ -45,7 +45,7 @@ class TypeBasedWorkerResolverTest extends \PHPUnit_Framework_TestCase
 
         $sut = new TypeBasedWorkerResolver();
 
-        $sut->setFactory(MessagePublisher::SUBDEF_CREATION_TYPE, $workerFactory);
+        $sut->addFactory(MessagePublisher::SUBDEF_CREATION_TYPE, $workerFactory);
 
 
         $this->assertInstanceOf('Alchemy\\WorkerPlugin\\Worker\\WorkerInterface',
@@ -67,11 +67,11 @@ class TypeBasedWorkerResolverTest extends \PHPUnit_Framework_TestCase
 
         $sut = new TypeBasedWorkerResolver();
 
-        $sut->setFactory(MessagePublisher::SUBDEF_CREATION_TYPE, $workerFactory);
+        $sut->addFactory(MessagePublisher::SUBDEF_CREATION_TYPE, $workerFactory);
 
         $this->expectException(\RuntimeException::class);
 
-        $sut->getWorker(MessagePublisher::WRITE_METADATAs_TYPE, ['mock-message']);
+        $sut->getWorker(MessagePublisher::WRITE_METADATAS_TYPE, ['mock-message']);
 
     }
 }

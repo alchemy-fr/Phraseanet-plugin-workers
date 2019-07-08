@@ -17,7 +17,7 @@ use Alchemy\Phrasea\Application as PhraseaApplication;
 use Alchemy\WorkerPlugin\Queue\AMQPConnection;
 use Alchemy\WorkerPlugin\Queue\MessageHandler;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
-use Alchemy\WorkerPlugin\Subscriber\AssetsSubscriber;
+use Alchemy\WorkerPlugin\Subscriber\AssetsIngestSubscriber;
 use Alchemy\WorkerPlugin\Subscriber\ExportSubscriber;
 use Alchemy\WorkerPlugin\Subscriber\RecordSubscriber;
 use Silex\Application;
@@ -52,18 +52,22 @@ class QueueServiceProvider implements PluginProviderInterface
         });
 
         $app['alchemy_service.message.handler'] = $app->share(function (Application $app) {
-            return new MessageHandler($app);
+            return new MessageHandler($app['alchemy_service.message.publisher']);
         });
 
         $app['alchemy_service.message.publisher'] = $app->share(function (Application $app) {
-            return new MessagePublisher($app);
+            return new MessagePublisher($app['alchemy_service.amqp.connection'], $app['alchemy_service.logger']);
         });
 
         $app['dispatcher'] = $app->share(
             $app->extend('dispatcher', function (EventDispatcherInterface $dispatcher, Application $app) {
-                $dispatcher->addSubscriber(new RecordSubscriber($app));
-                $dispatcher->addSubscriber(new ExportSubscriber($app));
-                $dispatcher->addSubscriber(new AssetsSubscriber($app));
+                $dispatcher->addSubscriber(new RecordSubscriber(
+                    $app['alchemy_service.message.publisher'],
+                    $app['alchemy_service.type_based_worker_resolver'],
+                    $app['provider.repo.media_subdef'])
+                );
+                $dispatcher->addSubscriber(new ExportSubscriber($app['alchemy_service.message.publisher']));
+                $dispatcher->addSubscriber(new AssetsIngestSubscriber($app['alchemy_service.message.publisher']));
 
                 return $dispatcher;
             })

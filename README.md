@@ -27,7 +27,7 @@ This is the repository for worker services in 4.1 PHRAS-2435
 - logs-queue
 - webhook-queue
 - createrecord-queue
-- injest-queue
+- ingest-queue
 
 ####Route added
 

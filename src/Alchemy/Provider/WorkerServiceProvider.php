@@ -6,7 +6,7 @@ use Alchemy\Phrasea\Application as PhraseaApplication;
 use Alchemy\Phrasea\Core\LazyLocator;
 use Alchemy\Phrasea\Plugin\PluginProviderInterface;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
-use Alchemy\WorkerPlugin\Worker\AssetsWorker;
+use Alchemy\WorkerPlugin\Worker\AssetsIngestWorker;
 use Alchemy\WorkerPlugin\Worker\CreateRecordWorker;
 use Alchemy\WorkerPlugin\Worker\ExportMailWorker;
 use Alchemy\WorkerPlugin\Worker\Factory\CallableWorkerFactory;
@@ -57,31 +57,31 @@ class WorkerServiceProvider implements PluginProviderInterface
             return $loggerSetter(new WorkerInvoker($app['alchemy_service.process_pool']));
         });
 
-        $app['alchemy_service.type_based_worker_resolver']->setFactory(MessagePublisher::SUBDEF_CREATION_TYPE, new CallableWorkerFactory(function () use ($app) {
-            return (new SubdefCreationWorker($app))
+        $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::SUBDEF_CREATION_TYPE, new CallableWorkerFactory(function () use ($app) {
+            return (new SubdefCreationWorker($app['subdef.generator'], $app['alchemy_service.message.publisher'], $app['alchemy_service.logger'], $app['dispatcher']))
                 ->setApplicationBox($app['phraseanet.appbox']);
         }));
 
-        $app['alchemy_service.type_based_worker_resolver']->setFactory(MessagePublisher::WRITE_METADATAs_TYPE, new CallableWorkerFactory(function () use ($app) {
-            return (new WriteMetadatasWorker($app))
+        $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::WRITE_METADATAS_TYPE, new CallableWorkerFactory(function () use ($app) {
+            return (new WriteMetadatasWorker($app['exiftool.writer'], $app['alchemy_service.logger'], $app['alchemy_service.message.publisher']))
                 ->setApplicationBox($app['phraseanet.appbox']);
         }));
 
-        $app['alchemy_service.type_based_worker_resolver']->setFactory(MessagePublisher::EXPORT_MAIL_TYPE, new CallableWorkerFactory(function () use ($app) {
+        $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::EXPORT_MAIL_TYPE, new CallableWorkerFactory(function () use ($app) {
             return (new ExportMailWorker($app))
                 ->setDelivererLocator(new LazyLocator($app, 'notification.deliverer'));
         }));
 
-        $app['alchemy_service.type_based_worker_resolver']->setFactory(MessagePublisher::LOGS_TYPE, new CallableWorkerFactory(function () use ($app) {
-            return new WriteLogsWorker($app);
+        $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::WRITE_LOGS_TYPE, new CallableWorkerFactory(function () use ($app) {
+            return new WriteLogsWorker($app['alchemy_service.logger']);
         }));
 
-        $app['alchemy_service.type_based_worker_resolver']->setFactory(MessagePublisher::ASSETS_INJEST_TYPE, new CallableWorkerFactory(function () use ($app) {
-            return (new AssetsWorker($app))
+        $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::ASSETS_INGEST_TYPE, new CallableWorkerFactory(function () use ($app) {
+            return (new AssetsIngestWorker($app))
                 ->setEntityManagerLocator(new LazyLocator($app, 'orm.em'));
         }));
 
-        $app['alchemy_service.type_based_worker_resolver']->setFactory(MessagePublisher::CREATE_RECORD_TYPE, new CallableWorkerFactory(function () use ($app) {
+        $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::CREATE_RECORD_TYPE, new CallableWorkerFactory(function () use ($app) {
             return (new CreateRecordWorker($app))
                 ->setApplicationBox($app['phraseanet.appbox'])
                 ->setBorderManagerLocator(new LazyLocator($app, 'border-manager'))

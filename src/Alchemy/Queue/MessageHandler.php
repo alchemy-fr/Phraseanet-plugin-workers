@@ -3,46 +3,34 @@
 namespace Alchemy\WorkerPlugin\Queue;
 
 use Alchemy\WorkerPlugin\Worker\WorkerInvoker;
-use Silex\Application;
 use PhpAmqpLib\Message\AMQPMessage;
 use Ramsey\Uuid\Uuid;
 use PhpAmqpLib\Channel\AMQPChannel;
 
 class MessageHandler
 {
-    private $app;
+    private $messagePublisher;
 
-    public function __construct(Application $app)
+    public function __construct(MessagePublisher $messagePublisher)
     {
-        $this->app = $app;
+        $this->messagePublisher = $messagePublisher;
     }
 
-    public function consume(AMQPChannel $channel, WorkerInvoker $workerInvoker, $argQueueName, $MWG, $clearMetadatas)
+    public function consume(AMQPChannel $channel, WorkerInvoker $workerInvoker, $argQueueName)
     {
-        $publisher = $this->app['alchemy_service.message.publisher'];
+        $publisher = $this->messagePublisher;
 
         // define consume callbacks
-        $callback = function (AMQPMessage $message) use ($channel, $workerInvoker, $publisher, $MWG, $clearMetadatas) {
+        $callback = function (AMQPMessage $message) use ($channel, $workerInvoker, $publisher) {
 
             $data = json_decode($message->getBody(), true);
-
-            // if write metadatas service, take account args MWG and clear-metadatas
-            if ($data['message_type'] == MessagePublisher::WRITE_METADATAs_TYPE) {
-                if ($MWG) {
-                    $data['payload']['MWG'] = true;
-                }
-
-                if ($clearMetadatas) {
-                    $data['payload']['clearDoc'] = true;
-                }
-            }
 
             try {
                 $workerInvoker->invokeWorker($data['message_type'], json_encode($data['payload']));
 
                 $channel->basic_ack($message->delivery_info['delivery_tag']);
 
-                if ($data['message_type'] !==  MessagePublisher::LOGS_TYPE) {
+                if ($data['message_type'] !==  MessagePublisher::WRITE_LOGS_TYPE) {
                     $oldPayload = $data['payload'];
                     $message = $data['message_type'].' to be consumed! >> Payload ::'. json_encode($oldPayload);
 
@@ -65,5 +53,4 @@ class MessageHandler
         }
 
     }
-
 }

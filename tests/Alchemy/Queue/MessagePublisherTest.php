@@ -27,9 +27,11 @@ class MessagePublisherTest extends \PHPUnit_Framework_TestCase
 
         $app['alchemy_service.amqp.connection'] = $app['alchemy_service.amqp.connection']->reveal();
 
-        $ut = new MessagePublisher($app);
+        $app['alchemy_service.logger'] = $this->prophesize("Monolog\Logger")->reveal();
 
-        $this->assertTrue($ut->publishMessage(['mock-payload'], 'mock-queue'));
+        $sut = new MessagePublisher($app['alchemy_service.amqp.connection'], $app['alchemy_service.logger']);
+
+        $this->assertTrue($sut->publishMessage(['mock-payload'], 'mock-queue'));
     }
 
     public function testMessageAreNotPublishedInExchange()
@@ -37,7 +39,7 @@ class MessagePublisherTest extends \PHPUnit_Framework_TestCase
         /** @var AMQPChannel $channel */
         $channel = $this->prophesize(AMQPChannel::class);
 
-        $channel->basic_publish( new AMQPMessage(json_encode(['mock-payload'])), AMQPConnection::ALCHEMY_EXCHANGE, 'mock-queue')
+        $channel->basic_publish(new AMQPMessage(json_encode(['mock-payload'])), AMQPConnection::ALCHEMY_EXCHANGE, 'mock-queue')
             ->shouldBeCalled()
             ->willThrow(new AMQPConnectionClosedException());
 
@@ -49,7 +51,9 @@ class MessagePublisherTest extends \PHPUnit_Framework_TestCase
 
         $app['alchemy_service.amqp.connection'] = $app['alchemy_service.amqp.connection']->reveal();
 
-        $sut = new MessagePublisher($app);
+        $app['alchemy_service.logger'] = $this->prophesize("Monolog\Logger")->reveal();
+
+        $sut = new MessagePublisher($app['alchemy_service.amqp.connection'], $app['alchemy_service.logger']);
 
         try {
             $sut->publishMessage(['mock-payload'], 'mock-queue');

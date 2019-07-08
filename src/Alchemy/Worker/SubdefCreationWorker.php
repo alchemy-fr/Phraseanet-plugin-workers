@@ -9,21 +9,32 @@ use Alchemy\Phrasea\Media\SubdefGenerator;
 use Alchemy\WorkerPlugin\Event\StoryCreateCoverEvent;
 use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
-use Silex\Application;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class SubdefCreationWorker implements WorkerInterface
 {
     use ApplicationBoxAware;
 
-    private $app;
+    private $subdefGenerator;
 
     /** @var MessagePublisher $messagePublisher */
     private $messagePublisher;
 
-    public function __construct(Application $app)
+    private $logger;
+    private $dispatcher;
+
+    public function __construct(
+        SubdefGenerator $subdefGenerator,
+        MessagePublisher $messagePublisher,
+        LoggerInterface $logger,
+        EventDispatcherInterface $dispatcher
+    )
     {
-        $this->app = $app;
-        $this->messagePublisher = $this->app['alchemy_service.message.publisher'];
+        $this->subdefGenerator  = $subdefGenerator;
+        $this->messagePublisher = $messagePublisher;
+        $this->logger           = $logger;
+        $this->dispatcher       = $dispatcher;
     }
 
     public function process(array $payload)
@@ -34,18 +45,16 @@ class SubdefCreationWorker implements WorkerInterface
 
             $record = $this->findDataboxById($databoxId)->get_record($recordId);
 
-            /** @var SubdefGenerator $subdefGenerator */
-            $subdefGenerator = $this->app['subdef.generator'];
-            $oldLogger = $subdefGenerator->getLogger();
+            $oldLogger = $this->subdefGenerator->getLogger();
 
             if (!$record->isStory()) {
-                $subdefGenerator->setLogger($this->app['alchemy_service.logger']);
+                $this->subdefGenerator->setLogger($this->logger);
 
-                $subdefGenerator->generateSubdefs($record);
+                $this->subdefGenerator->generateSubdefs($record);
 
-                $subdefGenerator->setLogger($oldLogger);
+                $this->subdefGenerator->setLogger($oldLogger);
 
-                $this->app['dispatcher']->dispatch(RecordEvents::METADATA_CHANGED, new MetadataChangedEvent($record));
+                $this->dispatcher->dispatch(RecordEvents::METADATA_CHANGED, new MetadataChangedEvent($record));
 
                 $parents = $record->get_grouping_parents();
 
@@ -54,7 +63,7 @@ class SubdefCreationWorker implements WorkerInterface
                         if (self::checkIfFirstChild($story, $record)) {
                             $data = implode('_', [$databoxId, $story->getRecordId(), $recordId]);
 
-                            $this->app['dispatcher']->dispatch(WorkerPluginEvents::STORY_CREATE_COVER, new StoryCreateCoverEvent($data));
+                            $this->dispatcher->dispatch(WorkerPluginEvents::STORY_CREATE_COVER, new StoryCreateCoverEvent($data));
                         }
                     }
                 }
