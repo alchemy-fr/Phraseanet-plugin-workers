@@ -22,7 +22,7 @@ class WorkerServiceTest extends \PHPUnit_Framework_TestCase
     {
         $app = new Application(Application::ENV_TEST);
 
-        $exportMailWorker = new ExportMailWorker($app->reveal());
+        $exportMailWorker = new ExportMailWorker($app);
         $this->assertInstanceOf('Alchemy\\WorkerPlugin\\Worker\\WorkerInterface', $exportMailWorker);
 
         $app['subdef.generator'] = $this->prophesize('Alchemy\Phrasea\Media\SubdefGenerator')->reveal();

@@ -43,7 +43,7 @@ class SubscriberTest extends \PHPUnit_Framework_TestCase
 
         $app['alchemy_service.message.publisher']->expects($this->atLeastOnce())->method('publishMessage');
         $app['provider.repo.media_subdef']->expects($this->any())
-            ->method('getMediaSubdefRepository')
+            ->method('getRepositoryForDatabox')
             ->will($this->returnValue($subdefRepository->reveal()));
 
 
