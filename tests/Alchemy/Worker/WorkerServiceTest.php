@@ -2,6 +2,7 @@
 
 namespace Alchemy\WorkerPlugin\Tests\Worker;
 
+use Alchemy\Phrasea\Application;
 use Alchemy\WorkerPlugin\Worker\AssetsIngestWorker;
 use Alchemy\WorkerPlugin\Worker\CreateRecordWorker;
 use Alchemy\WorkerPlugin\Worker\ExportMailWorker;
@@ -19,7 +20,7 @@ class WorkerServiceTest extends \PHPUnit_Framework_TestCase
 {
     public function testImplementationClass()
     {
-        $app = $this->prophesize('Alchemy\Phrasea\Application');
+        $app = new Application(Application::ENV_TEST);
 
         $exportMailWorker = new ExportMailWorker($app->reveal());
         $this->assertInstanceOf('Alchemy\\WorkerPlugin\\Worker\\WorkerInterface', $exportMailWorker);

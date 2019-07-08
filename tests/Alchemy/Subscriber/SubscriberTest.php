@@ -14,7 +14,7 @@ class SubscriberTest extends \PHPUnit_Framework_TestCase
 {
     public function testCallsImplements()
     {
-        $app = $this->prophesize('Alchemy\Phrasea\Application');
+        $app = new Application(Application::ENV_TEST);
         $app['alchemy_service.message.publisher'] = $this->prophesize('Alchemy\WorkerPlugin\Queue\MessagePublisher');
 
         $sexportSubscriber = new ExportSubscriber($app['alchemy_service.message.publisher']->reveal());
