@@ -2,16 +2,17 @@
 
 namespace Alchemy\WorkerPlugin\Queue;
 
+use Monolog\Logger;
 use PhpAmqpLib\Message\AMQPMessage;
-use Silex\Application;
+use Psr\Log\LoggerInterface;
 
 class MessagePublisher
 {
     const EXPORT_MAIL_TYPE     = 'exportMail';
-    const LOGS_TYPE            = 'logs';
+    const WRITE_LOGS_TYPE      = 'writeLogs';
     const SUBDEF_CREATION_TYPE = 'subdefCreation';
-    const WRITE_METADATAs_TYPE = 'writeMetadatas';
-    const ASSETS_INJEST_TYPE   = 'newAssets';
+    const WRITE_METADATAS_TYPE = 'writeMetadatas';
+    const ASSETS_INGEST_TYPE   = 'assetsIngest';
     const CREATE_RECORD_TYPE   = 'createRecord';
 
     const EXPORT_QUEUE         = 'export-queue';
@@ -19,26 +20,29 @@ class MessagePublisher
     const METADATAS_QUEUE      = 'metadatas-queue';
     const LOGS_QUEUE           = 'logs-queue';
     const WEBHOOK_QUEUE        = 'webhook-queue';
-    const ASSETS_INJEST_QUEUE  = 'injest-queue';
+    const ASSETS_INGEST_QUEUE  = 'ingest-queue';
     const CREATE_RECORD_QUEUE  = 'createrecord-queue';
 
     const NEW_RECORD_MESSAGE   = 'newrecord';
 
-    private $app;
 
-    public function __construct(Application $app)
+    /** @var AMQPConnection $serverConnection */
+    private $serverConnection;
+
+    /** @var  Logger */
+    private $logger;
+
+    public function __construct(AMQPConnection $serverConnection, LoggerInterface $logger)
     {
-        $this->app = $app;
+        $this->serverConnection = $serverConnection;
+        $this->logger           = $logger;
     }
 
     public function publishMessage(array $payload, $queueName)
     {
-        /** @var AMQPConnection $serverConnection */
-        $serverConnection = $this->app['alchemy_service.amqp.connection'];
-
         $msg = new AMQPMessage(json_encode($payload));
 
-        $channel = $serverConnection->setQueue($queueName);
+        $channel = $this->serverConnection->setQueue($queueName);
 
         $channel->basic_publish($msg, AMQPConnection::ALCHEMY_EXCHANGE, $queueName);
 
@@ -47,7 +51,7 @@ class MessagePublisher
 
     public function connectionClose()
     {
-        $this->app['alchemy_service.amqp.connection']->connectionClose();
+        $this->serverConnection->connectionClose();
     }
 
     /**
@@ -60,6 +64,6 @@ class MessagePublisher
 //        $this->publishMessage($data, self::LOGS_QUEUE);
 
         // write logs directly in file
-        $this->app['alchemy_service.logger']->info($message);
+        $this->logger->info($message);
     }
 }

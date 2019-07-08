@@ -2,7 +2,7 @@
 
 namespace Alchemy\WorkerPlugin\Tests\Worker;
 
-use Alchemy\WorkerPlugin\Worker\AssetsWorker;
+use Alchemy\WorkerPlugin\Worker\AssetsIngestWorker;
 use Alchemy\WorkerPlugin\Worker\CreateRecordWorker;
 use Alchemy\WorkerPlugin\Worker\ExportMailWorker;
 use Alchemy\WorkerPlugin\Worker\SubdefCreationWorker;
@@ -24,19 +24,29 @@ class WorkerServiceTest extends \PHPUnit_Framework_TestCase
         $exportMailWorker = new ExportMailWorker($app->reveal());
         $this->assertInstanceOf('Alchemy\\WorkerPlugin\\Worker\\WorkerInterface', $exportMailWorker);
 
+        $app['subdef.generator'] = $this->prophesize('Alchemy\Phrasea\Media\SubdefGenerator')->reveal();
+        $app['alchemy_service.message.publisher'] = $this->prophesize('Alchemy\WorkerPlugin\Queue\MessagePublisher')->reveal();
+        $app['alchemy_service.logger'] = $this->prophesize("Monolog\Logger")->reveal();
+        $app['dispatcher'] = $this->prophesize('Symfony\Component\EventDispatcher\EventDispatcherInterface')->reveal();
+        $writer = $this->prophesize('PHPExiftool\Writer')->reveal();
 
-        $subdefCreationWorker = new SubdefCreationWorker($app->reveal());
+        $subdefCreationWorker = new SubdefCreationWorker(
+            $app['subdef.generator'],
+            $app['alchemy_service.message.publisher'],
+            $app['alchemy_service.logger'],
+            $app['dispatcher']
+            );
         $this->assertInstanceOf('Alchemy\\WorkerPlugin\\Worker\\WorkerInterface', $subdefCreationWorker);
 
 
-        $writeLogsWorker = new WriteLogsWorker($app->reveal());
+        $writeLogsWorker = new WriteLogsWorker($app['alchemy_service.logger']);
         $this->assertInstanceOf('Alchemy\\WorkerPlugin\\Worker\\WorkerInterface', $writeLogsWorker);
 
 
-        $writemetadatasWorker = new WriteMetadatasWorker($app->reveal());
+        $writemetadatasWorker = new WriteMetadatasWorker($writer, $app['alchemy_service.logger'], $app['alchemy_service.message.publisher']);
         $this->assertInstanceOf('Alchemy\\WorkerPlugin\\Worker\\WorkerInterface', $writemetadatasWorker);
 
-        $assetsWorker = new AssetsWorker($app->reveal());
+        $assetsWorker = new AssetsIngestWorker($app->reveal());
         $this->assertInstanceOf('Alchemy\\WorkerPlugin\\Worker\\WorkerInterface', $assetsWorker);
 
         $createRecordWorker = new CreateRecordWorker($app->reveal());

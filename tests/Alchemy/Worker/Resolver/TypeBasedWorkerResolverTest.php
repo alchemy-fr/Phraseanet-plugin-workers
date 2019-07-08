@@ -71,7 +71,7 @@ class TypeBasedWorkerResolverTest extends \PHPUnit_Framework_TestCase
 
         $this->expectException(\RuntimeException::class);
 
-        $sut->getWorker(MessagePublisher::WRITE_METADATAs_TYPE, ['mock-message']);
+        $sut->getWorker(MessagePublisher::WRITE_METADATAS_TYPE, ['mock-message']);
 
     }
 }

@@ -22,7 +22,7 @@ class AMQPConnection
         MessagePublisher::EXPORT_QUEUE        => MessagePublisher::EXPORT_QUEUE,
         MessagePublisher::LOGS_QUEUE          => MessagePublisher::LOGS_QUEUE,
         MessagePublisher::WEBHOOK_QUEUE       => MessagePublisher::WEBHOOK_QUEUE,
-        MessagePublisher::ASSETS_INJEST_QUEUE => MessagePublisher::ASSETS_INJEST_QUEUE,
+        MessagePublisher::ASSETS_INGEST_QUEUE => MessagePublisher::ASSETS_INGEST_QUEUE,
         MessagePublisher::CREATE_RECORD_QUEUE => MessagePublisher::CREATE_RECORD_QUEUE,
     ];
 

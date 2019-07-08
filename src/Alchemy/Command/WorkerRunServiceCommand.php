@@ -10,11 +10,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class WorkerRunServiceCommand extends Command
 {
-    /**
-     * @var WorkerResolverInterface
-     */
-    private $workerResolver;
-
     public function __construct()
     {
         parent::__construct('worker:run-service');
@@ -29,7 +24,8 @@ class WorkerRunServiceCommand extends Command
 
     protected function doExecute(InputInterface $input, OutputInterface $output)
     {
-        $this->workerResolver = $this->container['alchemy_service.type_based_worker_resolver'];
+        /** @var WorkerResolverInterface $workerResolver */
+        $workerResolver = $this->container['alchemy_service.type_based_worker_resolver'];
 
         $type = $input->getArgument('type');
         $body = file_get_contents($input->getArgument('body'));
@@ -48,7 +44,7 @@ class WorkerRunServiceCommand extends Command
             return;
         }
 
-        $worker = $this->workerResolver->getWorker($type, $body);
+        $worker = $workerResolver->getWorker($type, $body);
 
         $worker->process($body);
 

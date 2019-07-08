@@ -14,43 +14,36 @@ use PHPExiftool\Driver\Value\Multi;
 use PHPExiftool\Exception\ExceptionInterface as PHPExiftoolException;
 use PHPExiftool\Exception\TagUnknown;
 use PHPExiftool\Writer;
-use Silex\Application;
+use Psr\Log\LoggerInterface;
 
 class WriteMetadatasWorker implements WorkerInterface
 {
     use ApplicationBoxAware;
 
-    private $app;
     /** @var Logger  */
-    private $log;
+    private $logger;
 
     /** @var MessagePublisher $messagePublisher */
     private $messagePublisher;
 
-    public function __construct(Application $app)
+    /** @var  Writer $writer */
+    private $writer;
+
+    public function __construct(Writer $writer, LoggerInterface $logger, MessagePublisher $messagePublisher)
     {
-        $this->app = $app;
-        $this->log = $this->app['alchemy_service.logger'];
-        $this->messagePublisher = $this->app['alchemy_service.message.publisher'];
+        $this->writer           = $writer;
+        $this->logger           = $logger;
+        $this->messagePublisher = $messagePublisher;
     }
 
     public function process(array $payload)
     {
-        if(isset($payload['recordId']) && isset($payload['databoxId'])) {
+        if (isset($payload['recordId']) && isset($payload['databoxId'])) {
             $recordId  = $payload['recordId'];
             $databoxId = $payload['databoxId'];
 
-            $MWG      = false;
-            $clearDoc = false;
-
-            // TODO: inject this data from commandline
-            if (isset($payload['MWG'])) {
-                $MWG = (bool) $payload['MWG'];
-            }
-
-            if (isset($payload['clearDoc'])) {
-                $clearDoc  = (bool) $payload['clearDoc'];
-            }
+            $MWG      = isset($payload['MWG']) ? $payload['MWG'] : false;
+            $clearDoc = isset($payload['clearDoc']) ? $payload['clearDoc'] : false;
 
             $databox = $this->findDataboxById($databoxId);
             $record  = $databox->get_record($recordId);
@@ -90,13 +83,13 @@ class WriteMetadatasWorker implements WorkerInterface
 
             // read document fields and add to metadatabag
             $caption = $record->get_caption();
-            foreach($databox->get_meta_structure() as $fieldStructure) {
+            foreach ($databox->get_meta_structure() as $fieldStructure) {
 
                 $tagName = $fieldStructure->get_tag()->getTagname();
                 $fieldName = $fieldStructure->get_name();
 
                 // skip fields with no src
-                if($tagName == '') {
+                if ($tagName == '' || $tagName == 'Phraseanet:no-source') {
                     continue;
                 }
 
@@ -114,13 +107,13 @@ class WriteMetadatasWorker implements WorkerInterface
                     if ($fieldStructure->is_multi()) {
                         $values = array();
                         foreach ($fieldValues as $value) {
-                            $values[] = $value->getValue();
+                            $values[] = $this->removeNulChar($value->getValue());
                         }
 
                         $value = new Multi($values);
                     } else {
                         $fieldValue = array_pop($fieldValues);
-                        $value = $fieldValue->getValue();
+                        $value = $this->removeNulChar($fieldValue->getValue());
 
                         $value = new Mono($value);
                     }
@@ -139,33 +132,24 @@ class WriteMetadatasWorker implements WorkerInterface
                 );
             }
 
-            $writer = $this->getMetadataWriter();
-            $writer->reset();
+            $this->writer->reset();
 
-            if($MWG) {
-                $writer->setModule(Writer::MODULE_MWG, true);
+            if ($MWG) {
+                $this->writer->setModule(Writer::MODULE_MWG, true);
             }
 
             foreach ($subdefs as $name => $file) {
-                $writer->erase($name != 'document' || $clearDoc, true);
+                $this->writer->erase($name != 'document' || $clearDoc, true);
                 try {
-                    $writer->write($file, $metadata);
+                    $this->writer->write($file, $metadata);
 
                     $this->messagePublisher->pushLog(sprintf('meta written for sbasid=%1$d - recordid=%2$d (%3$s)', $databox->get_sbas_id(), $recordId, $name));
                 } catch (PHPExiftoolException $e) {
-                    $this->log->error(sprintf('meta NOT written for sbasid=%1$d - recordid=%2$d (%3$s) because "%s"', $databox->get_sbas_id(), $recordId, $name, $e->getMessage()));
+                    $this->logger->error(sprintf('meta NOT written for sbasid=%1$d - recordid=%2$d (%3$s) because "%s"', $databox->get_sbas_id(), $recordId, $name, $e->getMessage()));
                 }
             }
         }
 
-    }
-
-    /**
-     * @return Writer
-     */
-    private function getMetadataWriter()
-    {
-        return $this->app['exiftool.writer'];
     }
 
     /**
@@ -181,5 +165,10 @@ class WriteMetadatasWorker implements WorkerInterface
         }
 
         return false;
+    }
+
+    private function removeNulChar($value)
+    {
+        return str_replace("\0", "", $value);
     }
 }

@@ -54,10 +54,10 @@ class WorkerInvoker implements LoggerAwareInterface
      */
     public function __construct(ProcessPool $processPool, $environment = false)
     {
-        $this->binaryPath = $_SERVER['SCRIPT_NAME'];
+        $this->binaryPath  = $_SERVER['SCRIPT_NAME'];
         $this->environment = $environment;
         $this->processPool = $processPool;
-        $this->logger = new NullLogger();
+        $this->logger      = new NullLogger();
     }
 
     public function preservePayloads()
