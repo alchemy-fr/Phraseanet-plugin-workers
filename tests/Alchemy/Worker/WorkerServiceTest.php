@@ -47,10 +47,10 @@ class WorkerServiceTest extends \PHPUnit_Framework_TestCase
         $writemetadatasWorker = new WriteMetadatasWorker($writer, $app['alchemy_service.logger'], $app['alchemy_service.message.publisher']);
         $this->assertInstanceOf('Alchemy\\WorkerPlugin\\Worker\\WorkerInterface', $writemetadatasWorker);
 
-        $assetsWorker = new AssetsIngestWorker($app->reveal());
+        $assetsWorker = new AssetsIngestWorker($app);
         $this->assertInstanceOf('Alchemy\\WorkerPlugin\\Worker\\WorkerInterface', $assetsWorker);
 
-        $createRecordWorker = new CreateRecordWorker($app->reveal());
+        $createRecordWorker = new CreateRecordWorker($app);
         $this->assertInstanceOf('Alchemy\\WorkerPlugin\\Worker\\WorkerInterface', $createRecordWorker);
     }
 }
