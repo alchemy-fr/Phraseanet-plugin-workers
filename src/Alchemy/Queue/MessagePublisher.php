@@ -14,6 +14,7 @@ class MessagePublisher
     const WRITE_METADATAS_TYPE = 'writeMetadatas';
     const ASSETS_INGEST_TYPE   = 'assetsIngest';
     const CREATE_RECORD_TYPE   = 'createRecord';
+    const WEBHOOK_TYPE         = 'webhook';
 
     const EXPORT_QUEUE         = 'export-queue';
     const SUBDEF_QUEUE         = 'subdef-queue';
@@ -56,14 +57,17 @@ class MessagePublisher
 
     /**
      * @param $message
+     * @param string $method
+     * @param array $context
      */
-    public function pushLog($message)
+    public function pushLog($message, $method = 'info', $context = [])
     {
 //        $data['message_type'] = self::LOGS_TYPE;
 //        $data['payload']['message'] = $message;
 //        $this->publishMessage($data, self::LOGS_QUEUE);
 
         // write logs directly in file
-        $this->logger->info($message);
+
+        call_user_func(array($this->logger, $method), $message, $context);
     }
 }
