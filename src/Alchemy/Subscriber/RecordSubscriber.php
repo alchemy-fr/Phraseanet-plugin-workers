@@ -2,12 +2,11 @@
 
 namespace Alchemy\WorkerPlugin\Subscriber;
 
+use Alchemy\Phrasea\Application\Helper\ApplicationBoxAware;
 use Alchemy\Phrasea\Core\Event\Record\MetadataChangedEvent;
 use Alchemy\Phrasea\Core\Event\Record\RecordEvent;
 use Alchemy\Phrasea\Core\Event\Record\RecordEvents;
 use Alchemy\Phrasea\Core\Event\Record\SubdefinitionBuildEvent;
-use Alchemy\Phrasea\Databox\DataboxBoundRepositoryProvider;
-use Alchemy\Phrasea\Databox\Subdef\MediaSubdefRepository;
 use Alchemy\WorkerPlugin\Event\StoryCreateCoverEvent;
 use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
@@ -19,24 +18,21 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class RecordSubscriber implements EventSubscriberInterface
 {
+    use ApplicationBoxAware;
+
     /** @var MessagePublisher $messagePublisher */
     private $messagePublisher;
 
     /** @var TypeBasedWorkerResolver  $workerResolver*/
     private $workerResolver;
 
-    /** @var  DataboxBoundRepositoryProvider $databoxRepoProvider */
-    private $databoxRepoProvider;
-
     public function __construct(
         MessagePublisher $messagePublisher,
-        WorkerResolverInterface $workerResolver,
-        DataboxBoundRepositoryProvider $databoxRepoProvider
+        WorkerResolverInterface $workerResolver
     )
     {
         $this->messagePublisher    = $messagePublisher;
         $this->workerResolver      = $workerResolver;
-        $this->databoxRepoProvider = $databoxRepoProvider;
     }
 
     public function onSubdefinitionBuild(SubdefinitionBuildEvent $event)
@@ -79,9 +75,9 @@ class RecordSubscriber implements EventSubscriberInterface
 
     public function onMetadataChanged(MetadataChangedEvent $event)
     {
-        $subdefs = $this->getMediaSubdefRepository($event->getRecord()->getDataboxId())->findByRecordIdsAndNames([$event->getRecord()->getRecordId()]);
+        $record = $this->findDataboxById($event->getRecord()->getDataboxId())->get_record($event->getRecord()->getRecordId());
 
-        if (count($subdefs) > 1) {
+        if (count($record->get_subdefs()) > 1) {
             $payload = [
                 'message_type' => MessagePublisher::WRITE_METADATAS_TYPE,
                 'payload' => [
@@ -116,13 +112,5 @@ class RecordSubscriber implements EventSubscriberInterface
             RecordEvents::METADATA_CHANGED         => 'onMetadataChanged',
             WorkerPluginEvents::STORY_CREATE_COVER => 'onStoryCreateCover',
         ];
-    }
-
-    /**
-     * @return MediaSubdefRepository
-     */
-    private function getMediaSubdefRepository($databoxId)
-    {
-        return $this->databoxRepoProvider->getRepositoryForDatabox($databoxId);
     }
 }

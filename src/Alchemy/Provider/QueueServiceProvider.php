@@ -75,10 +75,11 @@ class QueueServiceProvider implements PluginProviderInterface
 
         $app['dispatcher'] = $app->share(
             $app->extend('dispatcher', function (EventDispatcherInterface $dispatcher, Application $app) {
-                $dispatcher->addSubscriber(new RecordSubscriber(
-                    $app['alchemy_service.message.publisher'],
-                    $app['alchemy_service.type_based_worker_resolver'],
-                    $app['provider.repo.media_subdef'])
+                $dispatcher->addSubscriber(
+                    (new RecordSubscriber(
+                        $app['alchemy_service.message.publisher'],
+                        $app['alchemy_service.type_based_worker_resolver'])
+                    )->setApplicationBox($app['phraseanet.appbox'])
                 );
                 $dispatcher->addSubscriber(new ExportSubscriber($app['alchemy_service.message.publisher']));
                 $dispatcher->addSubscriber(new AssetsIngestSubscriber($app['alchemy_service.message.publisher']));
