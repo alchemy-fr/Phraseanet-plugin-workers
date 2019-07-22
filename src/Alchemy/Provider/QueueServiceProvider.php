@@ -86,11 +86,6 @@ class QueueServiceProvider implements PluginProviderInterface
 
                 $dispatcher->removeListener(PhraseaEvents::EXPORT_MAIL_CREATE, $exportMailListner);
                 $dispatcher->removeListener(RecordEvents::SUBDEFINITION_BUILD, $buildsubdefListener);
-
-                $dispatcher->addSubscriber(new RecordSubscriber(
-                    $app['alchemy_service.message.publisher'],
-                    $app['alchemy_service.type_based_worker_resolver'],
-                    $app['provider.repo.media_subdef'])
                 $dispatcher->addSubscriber(
                     (new RecordSubscriber(
                         $app['alchemy_service.message.publisher'],
