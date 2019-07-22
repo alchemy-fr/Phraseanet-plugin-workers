@@ -13,6 +13,7 @@ use Alchemy\WorkerPlugin\Worker\Factory\CallableWorkerFactory;
 use Alchemy\WorkerPlugin\Worker\ProcessPool;
 use Alchemy\WorkerPlugin\Worker\Resolver\TypeBasedWorkerResolver;
 use Alchemy\WorkerPlugin\Worker\SubdefCreationWorker;
+use Alchemy\WorkerPlugin\Worker\WebhookWorker;
 use Alchemy\WorkerPlugin\Worker\WorkerInvoker;
 use Alchemy\WorkerPlugin\Worker\WriteLogsWorker;
 use Alchemy\WorkerPlugin\Worker\WriteMetadatasWorker;
@@ -79,6 +80,10 @@ class WorkerServiceProvider implements PluginProviderInterface
         $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::ASSETS_INGEST_TYPE, new CallableWorkerFactory(function () use ($app) {
             return (new AssetsIngestWorker($app))
                 ->setEntityManagerLocator(new LazyLocator($app, 'orm.em'));
+        }));
+
+        $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::WEBHOOK_TYPE, new CallableWorkerFactory(function () use ($app) {
+            return new WebhookWorker($app);
         }));
 
         $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::CREATE_RECORD_TYPE, new CallableWorkerFactory(function () use ($app) {
