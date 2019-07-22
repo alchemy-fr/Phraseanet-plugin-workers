@@ -46,9 +46,6 @@ class RecordSubscriber implements EventSubscriberInterface
         ];
 
         $this->messagePublisher->publishMessage($payload, MessagePublisher::SUBDEF_QUEUE);
-
-        // avoid to execute the buildsubdef listener in the phraseanet core
-        $event->stopPropagation();
     }
 
     public function onRecordCreated(RecordEvent $event)
@@ -103,12 +100,9 @@ class RecordSubscriber implements EventSubscriberInterface
 
     public static function getSubscribedEvents()
     {
-        //  the method onBuildSubdefs listener in higher priority , so it called first and after stop event propagation$
-        //  to avoid to execute phraseanet core listener
-
         return [
             RecordEvents::CREATED                  => 'onRecordCreated',
-            RecordEvents::SUBDEFINITION_BUILD      => ['onSubdefinitionBuild', 10],
+            RecordEvents::SUBDEFINITION_BUILD      => 'onSubdefinitionBuild',
             RecordEvents::METADATA_CHANGED         => 'onMetadataChanged',
             WorkerPluginEvents::STORY_CREATE_COVER => 'onStoryCreateCover',
         ];

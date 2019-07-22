@@ -12,6 +12,10 @@
 namespace Alchemy\WorkerPlugin\Provider;
 
 use Alchemy\Phrasea\Core\Configuration\PropertyAccess;
+
+use Alchemy\Phrasea\Core\Event\Record\RecordEvents;
+use Alchemy\Phrasea\Core\Event\Subscriber\ExportSubscriber as ExportMailSubscriber;
+use Alchemy\Phrasea\Core\PhraseaEvents;
 use Alchemy\Phrasea\Model\Manipulator\WebhookEventManipulator;
 use Alchemy\Phrasea\Plugin\PluginProviderInterface;
 use Alchemy\Phrasea\Application as PhraseaApplication;
@@ -75,11 +79,19 @@ class QueueServiceProvider implements PluginProviderInterface
 
         $app['dispatcher'] = $app->share(
             $app->extend('dispatcher', function (EventDispatcherInterface $dispatcher, Application $app) {
+
+                // override  phraseanet core event
+                $exportMailListner = array(new ExportMailSubscriber($app), 'onCreateExportMail');
+                $buildsubdefListener = array($app['phraseanet.record-edit-subscriber'], 'onBuildSubdefs');
+
+                $dispatcher->removeListener(PhraseaEvents::EXPORT_MAIL_CREATE, $exportMailListner);
+                $dispatcher->removeListener(RecordEvents::SUBDEFINITION_BUILD, $buildsubdefListener);
                 $dispatcher->addSubscriber(
                     (new RecordSubscriber(
                         $app['alchemy_service.message.publisher'],
                         $app['alchemy_service.type_based_worker_resolver'])
                     )->setApplicationBox($app['phraseanet.appbox'])
+
                 );
                 $dispatcher->addSubscriber(new ExportSubscriber($app['alchemy_service.message.publisher']));
                 $dispatcher->addSubscriber(new AssetsIngestSubscriber($app['alchemy_service.message.publisher']));
