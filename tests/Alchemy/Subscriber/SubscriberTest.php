@@ -55,7 +55,7 @@ class SubscriberTest extends \PHPUnit_Framework_TestCase
 
         $event = $this->prophesize('Alchemy\Phrasea\Core\Event\Record\SubdefinitionBuildEvent');
         $event->getRecord()->willReturn($record->reveal());
-        $event->stopPropagation()->willReturn();
+        $event->isNewRecord()->willReturn(true);
         $sut->onSubdefinitionBuild($event->reveal());
     }
 }

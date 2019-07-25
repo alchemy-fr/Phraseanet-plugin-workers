@@ -41,7 +41,8 @@ class RecordSubscriber implements EventSubscriberInterface
             'message_type' => MessagePublisher::SUBDEF_CREATION_TYPE,
             'payload' => [
                 'recordId'  => $event->getRecord()->getRecordId(),
-                'databoxId' => $event->getRecord()->getDataboxId()
+                'databoxId' => $event->getRecord()->getDataboxId(),
+                'status'    => $event->isNewRecord() ? MessagePublisher::NEW_RECORD_MESSAGE : ''
             ]
         ];
 
@@ -54,20 +55,6 @@ class RecordSubscriber implements EventSubscriberInterface
             ($event->getRecord()->isStory() ? "story story_id" : "record record_id"),
             $event->getRecord()->getRecordId()
         ));
-
-        if (!$event->getRecord()->isStory()) {
-            $payload = [
-                'message_type' => MessagePublisher::SUBDEF_CREATION_TYPE,
-                'payload' => [
-                    'recordId'  => $event->getRecord()->getRecordId(),
-                    'databoxId' => $event->getRecord()->getDataboxId(),
-                    'status'    => MessagePublisher::NEW_RECORD_MESSAGE
-                ]
-            ];
-
-            $this->messagePublisher->publishMessage($payload, MessagePublisher::SUBDEF_QUEUE);
-        }
-
     }
 
     public function onMetadataChanged(MetadataChangedEvent $event)
