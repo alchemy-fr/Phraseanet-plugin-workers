@@ -1,2 +1,2 @@
 worker_plugin:
-  url_uploader_service: 'http://localhost:8080'
+  config: 'http://localhost:8080'

@@ -12,11 +12,15 @@
     },
     "token": {
       "type": "string"
+    },
+    "base_url": {
+      "type": "string"
     }
   },
   "required": [
     "assets",
     "publisher",
-    "token"
+    "token",
+    "base_url"
   ]
 }

@@ -49,10 +49,7 @@ class CreateRecordWorker implements WorkerInterface
 
     public function process(array $payload)
     {
-        $uploaderConfig = $this->app['worker_plugin.config']['worker_plugin'];
-
-        $uploaderClient = new Client(['base_uri' => $uploaderConfig['url_uploader_service']]);
-
+        $uploaderClient = new Client(['base_uri' => $payload['base_url']]);
 
         //get asset informations
         $body = $uploaderClient->get('/assets/'.$payload['asset'], [
@@ -74,7 +71,7 @@ class CreateRecordWorker implements WorkerInterface
         ]);
 
         if ($res->getStatusCode() !== 200) {
-            $this->logger->error(sprintf('Error %s downloading "%s"', $res->getStatusCode(), $uploaderConfig['url_uploader_service'].'/assets/'.$payload['asset'].'/download'));
+            $this->logger->error(sprintf('Error %s downloading "%s"', $res->getStatusCode(), $payload['base_url'].'/assets/'.$payload['asset'].'/download'));
         }
 
 

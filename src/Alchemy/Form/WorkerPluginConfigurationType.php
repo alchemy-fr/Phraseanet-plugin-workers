@@ -13,8 +13,8 @@ class WorkerPluginConfigurationType extends AbstractType
         parent::buildForm($builder, $options);
 
         $builder
-            ->add('url_uploader_service', 'text', [
-                'label' => 'Url uploader service',
+            ->add('config', 'text', [
+                'label' => 'Config (unused)',
                 'attr' => ['class' => 'input-xxlarge']
             ])
         ;
