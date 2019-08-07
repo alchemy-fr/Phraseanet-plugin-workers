@@ -28,7 +28,7 @@ class MessageHandlerTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $sut = new MessageHandler($app);
+        $sut = new MessageHandler($app['alchemy_service.message.publisher']->reveal());
 
         $sut->consume($channel, $workerInvoker, [MessagePublisher::METADATAS_QUEUE], true, true);
 
@@ -53,7 +53,7 @@ class MessageHandlerTest extends \PHPUnit_Framework_TestCase
             ->disableOriginalConstructor()
             ->getMock();
 
-        $sut = new MessageHandler($app);
+        $sut = new MessageHandler($app['alchemy_service.message.publisher']->reveal());
 
         try {
             $sut->consume($channel, $workerInvoker, [MessagePublisher::METADATAS_QUEUE], true, true);

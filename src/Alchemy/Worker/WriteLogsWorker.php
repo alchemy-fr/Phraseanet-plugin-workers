@@ -2,20 +2,20 @@
 
 namespace Alchemy\WorkerPlugin\Worker;
 
-use Silex\Application;
+use Psr\Log\LoggerInterface;
 
 class WriteLogsWorker implements WorkerInterface
 {
-    private $app;
+    private $logger;
 
-    public function __construct(Application $app)
+    public function __construct(LoggerInterface $logger)
     {
-        $this->app = $app;
+        $this->logger = $logger;
     }
 
     public function process(array $payload)
     {
         $message = $payload['message'];
-        $this->app['alchemy_service.logger']->info($message);
+        $this->logger->info($message);
     }
 }

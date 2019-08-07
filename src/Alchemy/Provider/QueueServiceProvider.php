@@ -12,12 +12,18 @@
 namespace Alchemy\WorkerPlugin\Provider;
 
 use Alchemy\Phrasea\Core\Configuration\PropertyAccess;
+
+use Alchemy\Phrasea\Core\Event\Record\RecordEvents;
+use Alchemy\Phrasea\Core\Event\Subscriber\ExportSubscriber as ExportMailSubscriber;
+use Alchemy\Phrasea\Core\PhraseaEvents;
+use Alchemy\Phrasea\Model\Manipulator\WebhookEventManipulator;
 use Alchemy\Phrasea\Plugin\PluginProviderInterface;
 use Alchemy\Phrasea\Application as PhraseaApplication;
 use Alchemy\WorkerPlugin\Queue\AMQPConnection;
 use Alchemy\WorkerPlugin\Queue\MessageHandler;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
-use Alchemy\WorkerPlugin\Subscriber\AssetsSubscriber;
+use Alchemy\WorkerPlugin\Queue\WebhookPublisher;
+use Alchemy\WorkerPlugin\Subscriber\AssetsIngestSubscriber;
 use Alchemy\WorkerPlugin\Subscriber\ExportSubscriber;
 use Alchemy\WorkerPlugin\Subscriber\RecordSubscriber;
 use Silex\Application;
@@ -52,18 +58,43 @@ class QueueServiceProvider implements PluginProviderInterface
         });
 
         $app['alchemy_service.message.handler'] = $app->share(function (Application $app) {
-            return new MessageHandler($app);
+            return new MessageHandler($app['alchemy_service.message.publisher']);
         });
 
         $app['alchemy_service.message.publisher'] = $app->share(function (Application $app) {
-            return new MessagePublisher($app);
+            return new MessagePublisher($app['alchemy_service.amqp.connection'], $app['alchemy_service.logger']);
+        });
+
+        $app['alchemy_service.webhook.publisher'] = $app->share(function (Application $app) {
+            return new WebhookPublisher($app['alchemy_service.message.publisher']);
+        });
+
+        $app['manipulator.webhook-event'] = $app->share(function (Application $app) {
+            return new WebhookEventManipulator(
+                $app['orm.em'],
+                $app['repo.webhook-event'],
+                $app['alchemy_service.webhook.publisher']
+            );
         });
 
         $app['dispatcher'] = $app->share(
             $app->extend('dispatcher', function (EventDispatcherInterface $dispatcher, Application $app) {
-                $dispatcher->addSubscriber(new RecordSubscriber($app));
-                $dispatcher->addSubscriber(new ExportSubscriber($app));
-                $dispatcher->addSubscriber(new AssetsSubscriber($app));
+
+                // override  phraseanet core event
+                $exportMailListner = array(new ExportMailSubscriber($app), 'onCreateExportMail');
+                $buildsubdefListener = array($app['phraseanet.record-edit-subscriber'], 'onBuildSubdefs');
+
+                $dispatcher->removeListener(PhraseaEvents::EXPORT_MAIL_CREATE, $exportMailListner);
+                $dispatcher->removeListener(RecordEvents::SUBDEFINITION_BUILD, $buildsubdefListener);
+                $dispatcher->addSubscriber(
+                    (new RecordSubscriber(
+                        $app['alchemy_service.message.publisher'],
+                        $app['alchemy_service.type_based_worker_resolver'])
+                    )->setApplicationBox($app['phraseanet.appbox'])
+
+                );
+                $dispatcher->addSubscriber(new ExportSubscriber($app['alchemy_service.message.publisher']));
+                $dispatcher->addSubscriber(new AssetsIngestSubscriber($app['alchemy_service.message.publisher']));
 
                 return $dispatcher;
             })

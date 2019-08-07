@@ -27,7 +27,7 @@ This is the repository for worker services in 4.1 PHRAS-2435
 - logs-queue
 - webhook-queue
 - createrecord-queue
-- injest-queue
+- ingest-queue
 
 #### Route added
 
@@ -44,7 +44,3 @@ required Parameters:  assets , publisher, token, base_url
 - statusbit
 - phraseanet_submiter_email
 - phraseanet_user_submiter_id
-
-#### Admin plugin Configuration
-
-Plugin setup

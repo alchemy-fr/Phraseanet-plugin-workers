@@ -9,7 +9,7 @@ use Alchemy\Phrasea\Model\Repositories\UserRepository;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use GuzzleHttp\Client;
 
-class AssetsWorker implements WorkerInterface
+class AssetsIngestWorker implements WorkerInterface
 {
     use EntityManagerAware;
 
