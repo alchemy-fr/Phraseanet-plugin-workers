@@ -45,7 +45,7 @@ class AssetsIngestWorker implements WorkerInterface
             $storyId = $this->createStory($body);
         }
 
-        foreach($assets as $assetId) {
+        foreach ($assets as $assetId) {
             $createRecordMessage['message_type'] = MessagePublisher::CREATE_RECORD_TYPE;
             $createRecordMessage['payload'] = [
                 'asset'      => $assetId,
@@ -57,6 +57,20 @@ class AssetsIngestWorker implements WorkerInterface
 
             $this->messagePublisher->publishMessage($createRecordMessage, MessagePublisher::CREATE_RECORD_QUEUE);
         }
+
+        //  post ack to the uploader
+        if (isset($payload['commit_id'])) {
+            $uploaderClient->post('/commits/' . $payload['commit_id'] . '/ack', [
+                    'headers' => [
+                        'Authorization' => 'AssetToken '.$payload['token']
+                    ],
+                    'json' => [
+                        'acknowledged' => true
+                    ]
+                ]
+            );
+        }
+
     }
 
     private function createStory(array $body)
