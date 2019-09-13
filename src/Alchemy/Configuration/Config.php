@@ -6,6 +6,8 @@ use Symfony\Component\Yaml\Yaml;
 
 class Config
 {
+    const WORKER_SERVICE_DATABASE_FILE = 'worker.db';
+
     public static function getConfigFilename()
     {
         $manifest_name = json_decode(file_get_contents(realpath(dirname(__FILE__)) . "/../../../manifest.json"))->name;
@@ -42,5 +44,30 @@ class Config
         $content = Yaml::dump(['worker_plugin' => $config]);
 
         file_put_contents(self::getConfigFilename(), $content);
+    }
+
+    public static function getPluginDatabaseFile()
+    {
+        $db_plugin_dir = realpath(dirname(__FILE__) . "/../../../") . "/db" ;
+
+        if (!is_dir($db_plugin_dir)) {
+            mkdir($db_plugin_dir, 0777, true);
+        }
+
+        $dbFile = $db_plugin_dir . '/' . self::WORKER_SERVICE_DATABASE_FILE;
+
+        if (!is_file($dbFile)) {
+            file_put_contents($dbFile, '');
+        }
+
+        return $dbFile;
+    }
+
+    public static function getWorkerSqliteConnection()
+    {
+        $db_conn = 'sqlite:'. self::getPluginDatabaseFile();
+        $pdo = new \PDO($db_conn);
+
+        return $pdo;
     }
 }
