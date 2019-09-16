@@ -82,10 +82,15 @@ class QueueServiceProvider implements PluginProviderInterface
 
                 // override  phraseanet core event
                 $exportMailListner = array(new ExportMailSubscriber($app), 'onCreateExportMail');
-                $buildsubdefListener = array($app['phraseanet.record-edit-subscriber'], 'onBuildSubdefs');
+
+                //  comment this to maintain jeton value
+//                $buildsubdefListener = array($app['phraseanet.record-edit-subscriber'], 'onBuildSubdefs');
 
                 $dispatcher->removeListener(PhraseaEvents::EXPORT_MAIL_CREATE, $exportMailListner);
-                $dispatcher->removeListener(RecordEvents::SUBDEFINITION_BUILD, $buildsubdefListener);
+
+                //  comment this to maintain jeton value
+//                $dispatcher->removeListener(RecordEvents::SUBDEFINITION_BUILD, $buildsubdefListener);
+
                 $dispatcher->addSubscriber(
                     (new RecordSubscriber(
                         $app['alchemy_service.message.publisher'],
