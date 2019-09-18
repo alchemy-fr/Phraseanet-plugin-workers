@@ -6,6 +6,7 @@ use Alchemy\Phrasea\Application\Helper\EntityManagerAware;
 use Alchemy\Phrasea\Application as PhraseaApplication;
 use Alchemy\Phrasea\Model\Entities\StoryWZ;
 use Alchemy\Phrasea\Model\Repositories\UserRepository;
+use Alchemy\WorkerPlugin\Configuration\Config;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use GuzzleHttp\Client;
 
@@ -27,6 +28,8 @@ class AssetsIngestWorker implements WorkerInterface
     public function process(array $payload)
     {
         $assets = $payload['assets'];
+
+        $this->saveAssetsList($payload['commit_id'], $assets);
 
         $uploaderClient = new Client(['base_uri' => $payload['base_url']]);
 
@@ -52,10 +55,36 @@ class AssetsIngestWorker implements WorkerInterface
                 'publisher'  => $payload['publisher'],
                 'assetToken' => $payload['token'],
                 'storyId'    => $storyId,
-                'base_url'   => $payload['base_url']
+                'base_url'   => $payload['base_url'],
+                'commit_id'  => $payload['commit_id']
             ];
 
             $this->messagePublisher->publishMessage($createRecordMessage, MessagePublisher::CREATE_RECORD_QUEUE);
+        }
+    }
+
+    private function saveAssetsList($commitId, $assetIds)
+    {
+        $pdo = Config::getWorkerSqliteConnection();
+
+        $pdo->beginTransaction();
+
+        try {
+            $pdo->query("CREATE TABLE IF NOT EXISTS commits(commit_id TEXT NOT NULL, asset TEXT NOT NULL);");
+
+            // insert all assets ID in the temporary sqlite database
+            foreach ($assetIds as $assetId) {
+                $stmt = $pdo->prepare("INSERT INTO commits(commit_id, asset) VALUES(:commit_id, :asset)");
+
+                $stmt->execute([
+                    ':commit_id' => $commitId,
+                    ':asset'     => $assetId
+                ]);
+            }
+
+            $pdo->commit();
+        } catch (\Exception $e) {
+            $pdo->rollBack();
         }
     }
 
