@@ -15,6 +15,7 @@ class MessagePublisher
     const ASSETS_INGEST_TYPE   = 'assetsIngest';
     const CREATE_RECORD_TYPE   = 'createRecord';
     const WEBHOOK_TYPE         = 'webhook';
+    const POPULATE_INDEX_TYPE  = 'populateIndex';
 
     const EXPORT_QUEUE         = 'export-queue';
     const SUBDEF_QUEUE         = 'subdef-queue';
@@ -23,6 +24,7 @@ class MessagePublisher
     const WEBHOOK_QUEUE        = 'webhook-queue';
     const ASSETS_INGEST_QUEUE  = 'ingest-queue';
     const CREATE_RECORD_QUEUE  = 'createrecord-queue';
+    const POPULATE_INDEX_QUEUE = 'populateindex-queue';
 
     const NEW_RECORD_MESSAGE   = 'newrecord';
 

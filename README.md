@@ -28,6 +28,7 @@ This is the repository for worker services in 4.1 PHRAS-2435
 - webhook-queue
 - createrecord-queue
 - ingest-queue
+- populateindex-queue
 
 #### Route added
 
@@ -35,9 +36,9 @@ This is the repository for worker services in 4.1 PHRAS-2435
 
 Authentification required
 
-required Parameters:  assets , publisher, token, base_url
+required Parameters:  assets , publisher, token, base_url, commit_id
 
-#### Reserved word used
+#### Reserved word used with uploader service form
 - metadata
 - collection_destination
 - is_story

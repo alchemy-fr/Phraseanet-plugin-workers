@@ -16,6 +16,9 @@ class WorkerPluginConfigurationVoter extends BaseVoter
             [self::VIEW],
             [
                 'Alchemy\WorkerPlugin\Configuration\ConfigurationTab',
+                'Alchemy\WorkerPlugin\Configuration\SearchengineTab',
+                'Alchemy\WorkerPlugin\Configuration\SubviewTab',
+                'Alchemy\WorkerPlugin\Configuration\MetadataTab',
             ]
         );
     }

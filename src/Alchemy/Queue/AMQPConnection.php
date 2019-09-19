@@ -17,13 +17,14 @@ class AMQPConnection
     private $hostConfig;
 
     public static $dafaultQueues = [
-        MessagePublisher::METADATAS_QUEUE     => MessagePublisher::METADATAS_QUEUE,
-        MessagePublisher::SUBDEF_QUEUE        => MessagePublisher::SUBDEF_QUEUE,
-        MessagePublisher::EXPORT_QUEUE        => MessagePublisher::EXPORT_QUEUE,
-        MessagePublisher::LOGS_QUEUE          => MessagePublisher::LOGS_QUEUE,
-        MessagePublisher::WEBHOOK_QUEUE       => MessagePublisher::WEBHOOK_QUEUE,
-        MessagePublisher::ASSETS_INGEST_QUEUE => MessagePublisher::ASSETS_INGEST_QUEUE,
-        MessagePublisher::CREATE_RECORD_QUEUE => MessagePublisher::CREATE_RECORD_QUEUE,
+        MessagePublisher::METADATAS_QUEUE       => MessagePublisher::METADATAS_QUEUE,
+        MessagePublisher::SUBDEF_QUEUE          => MessagePublisher::SUBDEF_QUEUE,
+        MessagePublisher::EXPORT_QUEUE          => MessagePublisher::EXPORT_QUEUE,
+        MessagePublisher::LOGS_QUEUE            => MessagePublisher::LOGS_QUEUE,
+        MessagePublisher::WEBHOOK_QUEUE         => MessagePublisher::WEBHOOK_QUEUE,
+        MessagePublisher::ASSETS_INGEST_QUEUE   => MessagePublisher::ASSETS_INGEST_QUEUE,
+        MessagePublisher::CREATE_RECORD_QUEUE   => MessagePublisher::CREATE_RECORD_QUEUE,
+        MessagePublisher::POPULATE_INDEX_QUEUE  => MessagePublisher::POPULATE_INDEX_QUEUE
     ];
 
     public function __construct(array $serverConfiguration)

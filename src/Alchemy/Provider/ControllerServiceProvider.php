@@ -11,6 +11,9 @@ use Alchemy\Phrasea\Plugin\PluginProviderInterface;
 use Alchemy\Phrasea\Security\Firewall;
 use Alchemy\WorkerPlugin\Configuration\Config;
 use Alchemy\WorkerPlugin\Configuration\ConfigurationTab;
+use Alchemy\WorkerPlugin\Configuration\MetadataTab;
+use Alchemy\WorkerPlugin\Configuration\SearchengineTab;
+use Alchemy\WorkerPlugin\Configuration\SubviewTab;
 use Alchemy\WorkerPlugin\Controller\AdminConfigurationController;
 use Alchemy\WorkerPlugin\Controller\ApiServiceController;
 use Alchemy\WorkerPlugin\Security\WorkerPluginConfigurationVoter;
@@ -62,16 +65,8 @@ class ControllerServiceProvider extends Api implements PluginProviderInterface
             })
         );
 
-        // define the route
-        /** @var Firewall  $firewall */
-        $firewall = $this->getFirewall($app);
-
-        $app->match('/worker-plugin/configuration',  'controller.admin.configuration:configuration')
-            ->method('GET|POST')
-            ->before(function () use ($firewall) {
-                $firewall->requireAccessToModule('admin');
-            })
-            ->bind('worker_plugin_admin_configuration');
+        // register admin route
+        $this->registerAdminRoutes($app);
     }
 
     /**
@@ -106,11 +101,26 @@ class ControllerServiceProvider extends Api implements PluginProviderInterface
     private function registerConfigurationTabs(Application $app)
     {
         $app['worker_plugin.configuration_tabs'] = [
+            'searchengine'  => 'worker_plugin.configuration_tabs.searchengine',
+            'subview'       => 'worker_plugin.configuration_tabs.subview',
+            'metadata'      => 'worker_plugin.configuration_tabs.metadata',
             'configuration' => 'worker_plugin.configuration_tabs.configuration',
         ];
 
         $app['worker_plugin.configuration_tabs.configuration'] = $app->share(function (PhraseaApplication $app) {
             return new ConfigurationTab($app['url_generator']);
+        });
+
+        $app['worker_plugin.configuration_tabs.searchengine'] = $app->share(function (PhraseaApplication $app) {
+            return new SearchengineTab($app['url_generator']);
+        });
+
+        $app['worker_plugin.configuration_tabs.subview'] = $app->share(function (PhraseaApplication $app) {
+            return new SubviewTab($app['url_generator']);
+        });
+
+        $app['worker_plugin.configuration_tabs.metadata'] = $app->share(function (PhraseaApplication $app) {
+            return new MetadataTab($app['url_generator']);
         });
     }
 
@@ -127,6 +137,46 @@ class ControllerServiceProvider extends Api implements PluginProviderInterface
                 return $voters;
             })
         );
+    }
+
+    private function registerAdminRoutes(Application $app)
+    {
+        /** @var Firewall  $firewall */
+        $firewall = $this->getFirewall($app);
+
+        $app->match('/worker-plugin/configuration',  'controller.admin.configuration:configurationAction')
+            ->method('GET|POST')
+            ->before(function () use ($firewall) {
+                $firewall->requireAccessToModule('admin');
+            })
+            ->bind('worker_plugin_admin_configuration');
+
+        $app->match('/worker-plugin/searchengine',  'controller.admin.configuration:searchengineAction')
+            ->method('GET|POST')
+            ->before(function () use ($firewall) {
+                $firewall->requireAccessToModule('admin');
+            })
+            ->bind('worker_plugin_admin_searchengine');
+
+        $app->match('/worker-plugin/subview',  'controller.admin.configuration:subviewAction')
+            ->method('GET|POST')
+            ->before(function () use ($firewall) {
+                $firewall->requireAccessToModule('admin');
+            })
+            ->bind('worker_plugin_admin_subview');
+
+        $app->match('/worker-plugin/metadata',  'controller.admin.configuration:metadataAction')
+            ->method('GET|POST')
+            ->before(function () use ($firewall) {
+                $firewall->requireAccessToModule('admin');
+            })
+            ->bind('worker_plugin_admin_metadata');
+
+        $app->get('/worker-plugin/populate-status',  'controller.admin.configuration:populateStatusAction')
+            ->before(function () use ($firewall) {
+                $firewall->requireAccessToModule('admin');
+            })
+            ->bind('worker_plugin_admin_populate_status');
     }
 
     /**

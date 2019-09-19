@@ -10,6 +10,7 @@ use Alchemy\WorkerPlugin\Worker\AssetsIngestWorker;
 use Alchemy\WorkerPlugin\Worker\CreateRecordWorker;
 use Alchemy\WorkerPlugin\Worker\ExportMailWorker;
 use Alchemy\WorkerPlugin\Worker\Factory\CallableWorkerFactory;
+use Alchemy\WorkerPlugin\Worker\PopulateIndexWorker;
 use Alchemy\WorkerPlugin\Worker\ProcessPool;
 use Alchemy\WorkerPlugin\Worker\Resolver\TypeBasedWorkerResolver;
 use Alchemy\WorkerPlugin\Worker\SubdefCreationWorker;
@@ -58,6 +59,8 @@ class WorkerServiceProvider implements PluginProviderInterface
             return $loggerSetter(new WorkerInvoker($app['alchemy_service.process_pool']));
         });
 
+
+        // register workers
         $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::SUBDEF_CREATION_TYPE, new CallableWorkerFactory(function () use ($app) {
             return (new SubdefCreationWorker($app['subdef.generator'], $app['alchemy_service.message.publisher'], $app['alchemy_service.logger'], $app['dispatcher']))
                 ->setApplicationBox($app['phraseanet.appbox']);
@@ -95,6 +98,12 @@ class WorkerServiceProvider implements PluginProviderInterface
                 ->setTemporaryFileSystemLocator(new LazyLocator($app, 'temporary-filesystem'))
                 ->setDispatcher($app['dispatcher']);
         }));
+
+        $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::POPULATE_INDEX_TYPE, new CallableWorkerFactory(function () use ($app) {
+            return (new PopulateIndexWorker($app['alchemy_service.message.publisher'], $app['elasticsearch.indexer']))
+                ->setApplicationBox($app['phraseanet.appbox']);
+        }));
+
     }
 
     /**
