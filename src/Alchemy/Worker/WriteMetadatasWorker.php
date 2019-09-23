@@ -3,6 +3,7 @@
 namespace Alchemy\WorkerPlugin\Worker;
 
 use Alchemy\Phrasea\Application\Helper\ApplicationBoxAware;
+use Alchemy\Phrasea\Core\PhraseaTokens;
 use Alchemy\Phrasea\Metadata\TagFactory;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use Monolog\Logger;
@@ -95,7 +96,10 @@ class WriteMetadatasWorker implements WorkerInterface
 
                 // check exiftool known tags to skip Phraseanet:tf-*
                 try {
-                    TagFactory::getFromRDFTagname($tagName);
+                    $tag = TagFactory::getFromRDFTagname($tagName);
+                    if(!$tag->isWritable()) {
+                        continue;
+                    }
                 } catch (TagUnknown $e) {
                     continue;
                 }
@@ -115,7 +119,19 @@ class WriteMetadatasWorker implements WorkerInterface
                         $fieldValue = array_pop($fieldValues);
                         $value = $this->removeNulChar($fieldValue->getValue());
 
-                        $value = new Mono($value);
+                        // fix the dates edited into phraseanet
+                        if($fieldStructure->get_type() === $fieldStructure::TYPE_DATE) {
+                            try {
+                                $value = self::fixDate($value); // will return NULL if the date is not valid
+                            }
+                            catch (\Exception $e) {
+                                $value = null;    // do NOT write back to iptc
+                            }
+                        }
+
+                        if($value !== null) {   // do not write invalid dates
+                            $value = new Mono($value);
+                        }
                     }
                 } catch(\Exception $e) {
                     // the field is not set in the record, erase it
@@ -127,9 +143,11 @@ class WriteMetadatasWorker implements WorkerInterface
                     }
                 }
 
-                $metadata->add(
-                    new Metadata($fieldStructure->get_tag(), $value)
-                );
+                if($value !== null) {   // do not write invalid data
+                    $metadata->add(
+                        new Metadata($fieldStructure->get_tag(), $value)
+                    );
+                }
             }
 
             $this->writer->reset();
@@ -148,6 +166,9 @@ class WriteMetadatasWorker implements WorkerInterface
                     $this->logger->error(sprintf('meta NOT written for sbasid=%1$d - recordid=%2$d (%3$s) because "%s"', $databox->get_sbas_id(), $recordId, $name, $e->getMessage()));
                 }
             }
+
+            // mark write metas finished
+            $this->updateJeton($record);
         }
 
     }
@@ -170,5 +191,51 @@ class WriteMetadatasWorker implements WorkerInterface
     private function removeNulChar($value)
     {
         return str_replace("\0", "", $value);
+    }
+
+    private function updateJeton(\record_adapter $record)
+    {
+        $connection = $record->getDatabox()->get_connection();
+
+        $connection->beginTransaction();
+        $stmt = $connection->prepare('UPDATE record SET jeton=(jeton & ~(:token)), moddate=NOW() WHERE record_id = :record_id');
+
+        $stmt->execute([
+            ':record_id'    => $record->getRecordId(),
+            ':token'        => PhraseaTokens::WRITE_META,
+        ]);
+
+        $connection->commit();
+        $stmt->closeCursor();
+    }
+
+    /**
+     * re-format a phraseanet date for iptc writing
+     * return NULL if the date is not valid
+     *
+     * @param string $value
+     * @return string|null
+     */
+    private static function fixDate($value)
+    {
+        $date = null;
+        try {
+            $a = explode(';', preg_replace('/\D+/', ';', trim($value)));
+            switch (count($a)) {
+                case 3:     // yyyy;mm;dd
+                    $date = new \DateTime($a[0] . '-' . $a[1] . '-' . $a[2]);
+                    $date = $date->format('Y-m-d H:i:s');
+                    break;
+                case 6:     // yyyy;mm;dd;hh;mm;ss
+                    $date = new \DateTime($a[0] . '-' . $a[1] . '-' . $a[2] . ' ' . $a[3] . ':' . $a[4] . ':' . $a[5]);
+                    $date = $date->format('Y-m-d H:i:s');
+                    break;
+            }
+        }
+        catch (\Exception $e) {
+            $date = null;
+        }
+
+        return $date;
     }
 }
