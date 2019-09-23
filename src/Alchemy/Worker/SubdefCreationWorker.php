@@ -5,6 +5,7 @@ namespace Alchemy\WorkerPlugin\Worker;
 use Alchemy\Phrasea\Application\Helper\ApplicationBoxAware;
 use Alchemy\Phrasea\Core\Event\Record\MetadataChangedEvent;
 use Alchemy\Phrasea\Core\Event\Record\RecordEvents;
+use Alchemy\Phrasea\Core\PhraseaTokens;
 use Alchemy\Phrasea\Media\SubdefGenerator;
 use Alchemy\WorkerPlugin\Event\StoryCreateCoverEvent;
 use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
@@ -56,6 +57,9 @@ class SubdefCreationWorker implements WorkerInterface
 
                 $this->dispatcher->dispatch(RecordEvents::METADATA_CHANGED, new MetadataChangedEvent($record));
 
+                //  update jeton when subdef is created
+                $this->updateJeton($record);
+
                 $parents = $record->get_grouping_parents();
 
                 if (!$parents->is_empty() && isset($payload['status']) && $payload['status'] == MessagePublisher::NEW_RECORD_MESSAGE) {
@@ -94,5 +98,26 @@ class SubdefCreationWorker implements WorkerInterface
         }
 
         return false;
+    }
+
+    private function updateJeton(\record_adapter $record)
+    {
+        $connection = $record->getDatabox()->get_connection();
+        $connection->beginTransaction();
+
+        // mark subdef created
+        $sql = 'UPDATE record'
+            . ' SET jeton=(jeton & ~(:token)), moddate=NOW()'
+            . ' WHERE record_id=:record_id';
+
+        $stmt = $connection->prepare($sql);
+
+        $stmt->execute([
+            ':record_id'    => $record->getRecordId(),
+            ':token'        => PhraseaTokens::MAKE_SUBDEF,
+        ]);
+
+        $connection->commit();
+        $stmt->closeCursor();
     }
 }
