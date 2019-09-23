@@ -26,6 +26,7 @@ use Alchemy\WorkerPlugin\Queue\WebhookPublisher;
 use Alchemy\WorkerPlugin\Subscriber\AssetsIngestSubscriber;
 use Alchemy\WorkerPlugin\Subscriber\ExportSubscriber;
 use Alchemy\WorkerPlugin\Subscriber\RecordSubscriber;
+use Alchemy\WorkerPlugin\Subscriber\SearchengineSubscriber;
 use Silex\Application;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
@@ -100,6 +101,7 @@ class QueueServiceProvider implements PluginProviderInterface
                 );
                 $dispatcher->addSubscriber(new ExportSubscriber($app['alchemy_service.message.publisher']));
                 $dispatcher->addSubscriber(new AssetsIngestSubscriber($app['alchemy_service.message.publisher']));
+                $dispatcher->addSubscriber(new SearchengineSubscriber($app['alchemy_service.message.publisher']));
 
                 return $dispatcher;
             })

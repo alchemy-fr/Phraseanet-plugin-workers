@@ -22,7 +22,7 @@ use Alchemy\Phrasea\Model\Entities\LazaretFile;
 use Alchemy\Phrasea\Model\Entities\LazaretSession;
 use Alchemy\Phrasea\Model\Entities\User;
 use Alchemy\Phrasea\Model\Repositories\UserRepository;
-use Alchemy\WorkerPlugin\Configuration\Config;
+use Alchemy\WorkerPlugin\Model\DBManipulator;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use GuzzleHttp\Client;
 use PDO;
@@ -76,7 +76,7 @@ class CreateRecordWorker implements WorkerInterface
             $this->logger->error(sprintf('Error %s downloading "%s"', $res->getStatusCode(), $payload['base_url'].'/assets/'.$payload['asset'].'/download'));
         }
 
-        $remainingAssets = $this->updateRemainingAssetsListByCommit($payload['commit_id'], $payload['asset']);
+        $remainingAssets = DBManipulator::updateRemainingAssetsListByCommit($payload['commit_id'], $payload['asset']);
 
         //  if all assets in the commit are downloaded , send ack to the uploader
         if ($remainingAssets == 0) {
@@ -212,42 +212,6 @@ class CreateRecordWorker implements WorkerInterface
 
             $this->messagePublisher->pushLog(sprintf("Cover set for story story_id= %d with the record record_id = %d", $story->getRecordId(), $record->getRecordId()));
         }
-    }
-
-    /**
-     *  Update commits table in the temporary sqlite worker.db
-     * @param $commitId
-     * @param $assetId
-     * @return int  the number of the remaining assets in the commit
-     */
-    private function updateRemainingAssetsListByCommit($commitId, $assetId)
-    {
-        $row = 1;
-        $pdo = Config::getWorkerSqliteConnection();
-
-        $pdo->beginTransaction();
-
-        try {
-            // remove assetId from the assets list
-            $stmt = $pdo->prepare("DELETE FROM commits WHERE commit_id = :commit_id AND asset= :assetId");
-            $stmt->execute([
-                ':commit_id' => $commitId,
-                ':assetId'   => $assetId
-            ]);
-
-            $stmt = $pdo->prepare("SELECT * FROM commits WHERE commit_id = :commit_id");
-            $stmt->execute([
-                ':commit_id' => $commitId,
-            ]);
-
-            $row = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $pdo->commit();
-
-        } catch (\Exception $e) {
-            $pdo->rollBack();
-        }
-
-        return count($row);
     }
 
     /**
