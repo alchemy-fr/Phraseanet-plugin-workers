@@ -6,7 +6,7 @@ use Alchemy\Phrasea\Application\Helper\ApplicationBoxAware;
 use Alchemy\Phrasea\Core\Event\Record\MetadataChangedEvent;
 use Alchemy\Phrasea\Core\Event\Record\RecordEvent;
 use Alchemy\Phrasea\Core\Event\Record\RecordEvents;
-use Alchemy\Phrasea\Core\Event\Record\SubdefinitionBuildEvent;
+use Alchemy\Phrasea\Core\Event\Record\SubdefinitionCreateEvent;
 use Alchemy\WorkerPlugin\Event\StoryCreateCoverEvent;
 use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
@@ -35,7 +35,7 @@ class RecordSubscriber implements EventSubscriberInterface
         $this->workerResolver      = $workerResolver;
     }
 
-    public function onSubdefinitionBuild(SubdefinitionBuildEvent $event)
+    public function onSubdefinitionCreate(SubdefinitionCreateEvent $event)
     {
         $payload = [
             'message_type' => MessagePublisher::SUBDEF_CREATION_TYPE,
@@ -89,7 +89,7 @@ class RecordSubscriber implements EventSubscriberInterface
     {
         return [
             RecordEvents::CREATED                  => 'onRecordCreated',
-            RecordEvents::SUBDEFINITION_BUILD      => 'onSubdefinitionBuild',
+            RecordEvents::SUBDEFINITION_CREATE     => 'onSubdefinitionCreate',
             RecordEvents::METADATA_CHANGED         => 'onMetadataChanged',
             WorkerPluginEvents::STORY_CREATE_COVER => 'onStoryCreateCover',
         ];
