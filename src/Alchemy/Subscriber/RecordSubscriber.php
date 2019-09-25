@@ -2,18 +2,19 @@
 
 namespace Alchemy\WorkerPlugin\Subscriber;
 
+use Alchemy\Phrasea\Application;
 use Alchemy\Phrasea\Application\Helper\ApplicationBoxAware;
 use Alchemy\Phrasea\Core\Event\Record\MetadataChangedEvent;
 use Alchemy\Phrasea\Core\Event\Record\RecordEvent;
 use Alchemy\Phrasea\Core\Event\Record\RecordEvents;
 use Alchemy\Phrasea\Core\Event\Record\SubdefinitionCreateEvent;
+use Alchemy\Phrasea\Databox\Subdef\MediaSubdefRepository;
 use Alchemy\WorkerPlugin\Event\StoryCreateCoverEvent;
 use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use Alchemy\WorkerPlugin\Worker\CreateRecordWorker;
 use Alchemy\WorkerPlugin\Worker\Factory\WorkerFactoryInterface;
 use Alchemy\WorkerPlugin\Worker\Resolver\TypeBasedWorkerResolver;
-use Alchemy\WorkerPlugin\Worker\Resolver\WorkerResolverInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class RecordSubscriber implements EventSubscriberInterface
@@ -26,13 +27,14 @@ class RecordSubscriber implements EventSubscriberInterface
     /** @var TypeBasedWorkerResolver  $workerResolver*/
     private $workerResolver;
 
-    public function __construct(
-        MessagePublisher $messagePublisher,
-        WorkerResolverInterface $workerResolver
-    )
+    /** @var  Application */
+    private $app;
+
+    public function __construct(Application $app)
     {
-        $this->messagePublisher    = $messagePublisher;
-        $this->workerResolver      = $workerResolver;
+        $this->messagePublisher    = $app['alchemy_service.message.publisher'];
+        $this->workerResolver      = $app['alchemy_service.type_based_worker_resolver'];
+        $this->app                 = $app;
     }
 
     public function onSubdefinitionCreate(SubdefinitionCreateEvent $event)
@@ -59,19 +61,26 @@ class RecordSubscriber implements EventSubscriberInterface
 
     public function onMetadataChanged(MetadataChangedEvent $event)
     {
-        $record = $this->findDataboxById($event->getRecord()->getDataboxId())->get_record($event->getRecord()->getRecordId());
+        $mediaSubdefRepository = $this->getMediaSubdefRepository($event->getRecord()->getDataboxId());
+        $mediaSubdefs = $mediaSubdefRepository->findByRecordIdsAndNames([$event->getRecord()->getRecordId()]);
+        $mediaDocument = $mediaSubdefRepository->findByRecordIdsAndNames([$event->getRecord()->getRecordId()], ['document']);
 
-        if (count($record->get_subdefs()) > 1) {
-            $payload = [
-                'message_type' => MessagePublisher::WRITE_METADATAS_TYPE,
-                'payload' => [
-                    'recordId'  => $event->getRecord()->getRecordId(),
-                    'databoxId' => $event->getRecord()->getDataboxId()
-                ]
-            ];
+        $isOnlyDocument = false;
 
-            $this->messagePublisher->publishMessage($payload, MessagePublisher::METADATAS_QUEUE);
+        if (count($mediaSubdefs) == 1 && count($mediaDocument)) {
+            $isOnlyDocument = true;
         }
+
+        $payload = [
+            'message_type' => MessagePublisher::WRITE_METADATAS_TYPE,
+            'payload' => [
+                'recordId'          => $event->getRecord()->getRecordId(),
+                'databoxId'         => $event->getRecord()->getDataboxId(),
+                'isOnlyDocument'    => $isOnlyDocument
+            ]
+        ];
+
+        $this->messagePublisher->publishMessage($payload, MessagePublisher::METADATAS_QUEUE);
     }
 
     public function onStoryCreateCover(StoryCreateCoverEvent $event)
@@ -93,5 +102,15 @@ class RecordSubscriber implements EventSubscriberInterface
             RecordEvents::METADATA_CHANGED         => 'onMetadataChanged',
             WorkerPluginEvents::STORY_CREATE_COVER => 'onStoryCreateCover',
         ];
+    }
+
+    /**
+     * @param $databoxId
+     *
+     * @return MediaSubdefRepository
+     */
+    private function getMediaSubdefRepository($databoxId)
+    {
+        return $this->app['provider.repo.media_subdef']->getRepositoryForDatabox($databoxId);
     }
 }

@@ -50,10 +50,10 @@ class WriteMetadatasWorker implements WorkerInterface
             $record  = $databox->get_record($recordId);
             $type    = $record->getType();
 
-            // retrieve subdefs existed physically and subdefmetadatarequired
+            // retrieve subdefs existed physically and subdefmetadatarequired if the order to write is not only for document
             $subdefs = [];
             foreach ($record->get_subdefs() as $name => $subdef) {
-                if ($subdef->is_physically_present() && ($name == 'document' || $this->isSubdefMetadataUpdateRequired($databox, $type, $name))) {
+                if ($subdef->is_physically_present() && ($name == 'document' || ($this->isSubdefMetadataUpdateRequired($databox, $type, $name) && !$payload['isOnlyDocument']) )) {
                     $subdefs[$name] = $subdef->getRealPath();
                 }
             }
