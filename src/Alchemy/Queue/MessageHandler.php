@@ -45,9 +45,13 @@ class MessageHandler
         foreach (AMQPConnection::$dafaultQueues as $queueName) {
             if ($argQueueName ) {
                 if (in_array($queueName, $argQueueName)) {
+                    //  give one message to a worker consumer at a time
+                    $channel->basic_qos(null, 1, null);
                     $channel->basic_consume($queueName, Uuid::uuid4(), false, false, false, false, $callback);
                 }
             } else {
+                    //  give one message to a worker consumer at a time
+                    $channel->basic_qos(null, 1, null);
                     $channel->basic_consume($queueName, Uuid::uuid4(), false, false, false, false, $callback);
             }
         }
