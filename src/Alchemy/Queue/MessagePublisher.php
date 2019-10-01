@@ -17,6 +17,7 @@ class MessagePublisher
     const WEBHOOK_TYPE         = 'webhook';
     const POPULATE_INDEX_TYPE  = 'populateIndex';
 
+    // worker queue  to be consumed, when no ack , it is requeued to the retry queue
     const EXPORT_QUEUE         = 'export-queue';
     const SUBDEF_QUEUE         = 'subdef-queue';
     const METADATAS_QUEUE      = 'metadatas-queue';
@@ -25,6 +26,16 @@ class MessagePublisher
     const ASSETS_INGEST_QUEUE  = 'ingest-queue';
     const CREATE_RECORD_QUEUE  = 'createrecord-queue';
     const POPULATE_INDEX_QUEUE = 'populateindex-queue';
+
+    // retry queue
+    // we can use these retry queue with TTL, so when message expires it is requeued to the corresponding worker queue
+    const RETRY_EXPORT_QUEUE         = 'retry-export-queue';
+    const RETRY_SUBDEF_QUEUE         = 'retry-subdef-queue';
+    const RETRY_METADATAS_QUEUE      = 'retry-metadatas-queue';
+    const RETRY_WEBHOOK_QUEUE        = 'retry-webhook-queue';
+    const RETRY_ASSETS_INGEST_QUEUE  = 'retry-ingest-queue';
+    const RETRY_CREATE_RECORD_QUEUE  = 'retry-createrecord-queue';
+    const RETRY_POPULATE_INDEX_QUEUE = 'retry-populateindex-queue';
 
     const NEW_RECORD_MESSAGE   = 'newrecord';
 
