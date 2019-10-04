@@ -46,7 +46,7 @@ class WorkerExecuteCommand extends Command
         /** @var WorkerInvoker $workerInvoker */
         $workerInvoker = $this->container['alchemy_service.worker_invoker'];
 
-        if ($input->getOption('max-processes') && $maxProcesses == 0) {
+        if ($input->getOption('max-processes') != null && $maxProcesses == 0) {
             $output->writeln('<error>Invalid max-processes option.Need an integer</error>');
 
             return;
@@ -68,7 +68,7 @@ class WorkerExecuteCommand extends Command
 
         /** @var MessageHandler $messageHandler */
         $messageHandler = $this->container['alchemy_service.message.handler'];
-        $messageHandler->consume($channel, $workerInvoker, $argQueueName, $MWG, $clearMetadatas);
+        $messageHandler->consume($channel, $workerInvoker, $argQueueName, $maxProcesses);
 
         while (count($channel->callbacks)) {
             $output->writeln("[*] Waiting for messages. To exit press CTRL+C");

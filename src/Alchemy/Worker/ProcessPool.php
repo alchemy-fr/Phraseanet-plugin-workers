@@ -10,10 +10,12 @@ use Symfony\Component\Process\ProcessBuilder;
 
 class ProcessPool implements LoggerAwareInterface
 {
+    const MAX_PROCESSES = 4;
+
     /**
      * @var int
      */
-    private $maxProcesses = 4;
+    private $maxProcesses = self::MAX_PROCESSES;
 
     /**
      * @var Process[]
