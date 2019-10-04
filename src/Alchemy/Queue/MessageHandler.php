@@ -2,6 +2,7 @@
 
 namespace Alchemy\WorkerPlugin\Queue;
 
+use Alchemy\WorkerPlugin\Worker\ProcessPool;
 use Alchemy\WorkerPlugin\Worker\WorkerInvoker;
 use PhpAmqpLib\Message\AMQPMessage;
 use Ramsey\Uuid\Uuid;
@@ -16,7 +17,7 @@ class MessageHandler
         $this->messagePublisher = $messagePublisher;
     }
 
-    public function consume(AMQPChannel $channel, WorkerInvoker $workerInvoker, $argQueueName)
+    public function consume(AMQPChannel $channel, WorkerInvoker $workerInvoker, $argQueueName, $maxProcesses)
     {
         $publisher = $this->messagePublisher;
 
@@ -42,16 +43,22 @@ class MessageHandler
 
         };
 
+        $prefetchCount = ProcessPool::MAX_PROCESSES;
+
+        if ($maxProcesses) {
+            $prefetchCount = $maxProcesses;
+        }
+
         foreach (AMQPConnection::$dafaultQueues as $queueName) {
             if ($argQueueName ) {
                 if (in_array($queueName, $argQueueName)) {
                     //  give one message to a worker consumer at a time
-                    $channel->basic_qos(null, 1, null);
+                    $channel->basic_qos(null, $prefetchCount, null);
                     $channel->basic_consume($queueName, Uuid::uuid4(), false, false, false, false, $callback);
                 }
             } else {
                     //  give one message to a worker consumer at a time
-                    $channel->basic_qos(null, 1, null);
+                    $channel->basic_qos(null, $prefetchCount, null);
                     $channel->basic_consume($queueName, Uuid::uuid4(), false, false, false, false, $callback);
             }
         }
