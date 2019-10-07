@@ -4,6 +4,7 @@ namespace Alchemy\WorkerPlugin\Queue;
 
 use Monolog\Logger;
 use PhpAmqpLib\Message\AMQPMessage;
+use \PhpAmqpLib\Channel\AMQPChannel;
 use Psr\Log\LoggerInterface;
 
 class MessagePublisher
@@ -82,5 +83,13 @@ class MessagePublisher
         // write logs directly in file
 
         call_user_func(array($this->logger, $method), $message, $context);
+    }
+
+    /**
+     * @return AMQPChannel
+     */
+    public function getChannel()
+    {
+        return $this->serverConnection->getChannel();
     }
 }
