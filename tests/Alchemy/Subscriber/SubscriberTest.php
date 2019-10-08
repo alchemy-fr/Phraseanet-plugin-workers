@@ -46,10 +46,7 @@ class SubscriberTest extends \PHPUnit_Framework_TestCase
 
         $event = $this->prophesize('Alchemy\Phrasea\Core\Event\Record\RecordEvent');
         $event->getRecord()->willReturn($record->reveal());
-        $sut = new RecordSubscriber(
-            $app['alchemy_service.message.publisher'],
-            $app['alchemy_service.type_based_worker_resolver']
-            );
+        $sut = new RecordSubscriber($app);
 
         $sut->onRecordCreated($event->reveal());
 
