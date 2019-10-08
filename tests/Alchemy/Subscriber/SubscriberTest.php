@@ -47,6 +47,7 @@ class SubscriberTest extends \PHPUnit_Framework_TestCase
         $event = $this->prophesize('Alchemy\Phrasea\Core\Event\Record\RecordEvent');
         $event->getRecord()->willReturn($record->reveal());
         $sut = new RecordSubscriber($app);
+        $sut->setApplicationBox($app['phraseanet.appbox']);
 
         $sut->onRecordCreated($event->reveal());
 
