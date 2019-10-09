@@ -184,34 +184,23 @@ class CreateRecordWorker implements WorkerInterface
     }
 
     /**
-     * @param string $data  databoxId_storyId_recordId
+     * @param string $data  databoxId_storyId_recordId  subdefName
      */
     public function setStoryCover($data)
     {
-        // get databoxId , storyId and recordId
+        // get databoxId , storyId , recordId
         $tData = explode('_', $data);
 
         $record = $this->findDataboxById($tData[0])->get_record($tData[2]);
 
-        $story =  $this->findDataboxById($tData[0])->get_record( $tData[1]);
+        $story =  $this->findDataboxById($tData[0])->get_record($tData[1]);
+        $subdefName = $tData[3];
 
-        $subdefChanged = false;
-        foreach ($record->get_subdefs() as $name => $value) {
-            if (!in_array($name, array('thumbnail', 'preview'))) {
-                continue;
-            }
+        $subdef = $record->get_subdef($tData[3]);
+        $media = $this->app->getMediaFromUri($subdef->getRealPath());
+        $this->getSubdefSubstituer()->substituteSubdef($story, $subdefName, $media);  // subdefName = thumbnail | preview
 
-            $media = $this->app->getMediaFromUri($value->getRealPath());
-            $this->getSubdefSubstituer()->substituteSubdef($story, $name, $media);  // name = thumbnail | preview
-            $subdefChanged = true;
-        }
-
-        if ($subdefChanged) {
-            $this->dispatch(RecordEvents::STORY_COVER_CHANGED, new StoryCoverChangedEvent($story, $record));
-            $this->dispatch(PhraseaEvents::RECORD_EDIT, new RecordEdit($story));
-
-            $this->messagePublisher->pushLog(sprintf("Cover set for story story_id= %d with the record record_id = %d", $story->getRecordId(), $record->getRecordId()));
-        }
+        $this->messagePublisher->pushLog(sprintf("Cover %s set for story story_id= %d with the record record_id = %d", $subdefName, $story->getRecordId(), $record->getRecordId()));
     }
 
     /**

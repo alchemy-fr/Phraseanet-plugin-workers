@@ -68,7 +68,8 @@ class WorkerServiceProvider implements PluginProviderInterface
 
         $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::WRITE_METADATAS_TYPE, new CallableWorkerFactory(function () use ($app) {
             return (new WriteMetadatasWorker($app['exiftool.writer'], $app['alchemy_service.logger'], $app['alchemy_service.message.publisher']))
-                ->setApplicationBox($app['phraseanet.appbox']);
+                ->setApplicationBox($app['phraseanet.appbox'])
+                ->setDispatcher($app['dispatcher']);
         }));
 
         $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::EXPORT_MAIL_TYPE, new CallableWorkerFactory(function () use ($app) {

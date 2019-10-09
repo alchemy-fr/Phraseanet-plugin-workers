@@ -87,9 +87,7 @@ class QueueServiceProvider implements PluginProviderInterface
                 $dispatcher->removeListener(PhraseaEvents::EXPORT_MAIL_CREATE, $exportMailListner);
 
                 $dispatcher->addSubscriber(
-                    (new RecordSubscriber(
-                        $app['alchemy_service.message.publisher'],
-                        $app['alchemy_service.type_based_worker_resolver'])
+                    (new RecordSubscriber($app)
                     )->setApplicationBox($app['phraseanet.appbox'])
 
                 );

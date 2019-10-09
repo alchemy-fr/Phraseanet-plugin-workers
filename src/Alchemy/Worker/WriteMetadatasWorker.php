@@ -3,8 +3,11 @@
 namespace Alchemy\WorkerPlugin\Worker;
 
 use Alchemy\Phrasea\Application\Helper\ApplicationBoxAware;
+use Alchemy\Phrasea\Application\Helper\DispatcherAware;
 use Alchemy\Phrasea\Core\PhraseaTokens;
 use Alchemy\Phrasea\Metadata\TagFactory;
+use Alchemy\WorkerPlugin\Event\SubdefinitionWritemetaEvent;
+use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use Monolog\Logger;
 use PHPExiftool\Driver\Metadata\Metadata;
@@ -20,6 +23,7 @@ use Psr\Log\LoggerInterface;
 class WriteMetadatasWorker implements WorkerInterface
 {
     use ApplicationBoxAware;
+    use DispatcherAware;
 
     /** @var Logger  */
     private $logger;
@@ -48,15 +52,8 @@ class WriteMetadatasWorker implements WorkerInterface
 
             $databox = $this->findDataboxById($databoxId);
             $record  = $databox->get_record($recordId);
-            $type    = $record->getType();
 
-            // retrieve subdefs existed physically and subdefmetadatarequired
-            $subdefs = [];
-            foreach ($record->get_subdefs() as $name => $subdef) {
-                if ($subdef->is_physically_present() && ($name == 'document' || $this->isSubdefMetadataUpdateRequired($databox, $type, $name))) {
-                    $subdefs[$name] = $subdef->getRealPath();
-                }
-            }
+            $subdef = $record->get_subdef($payload['subdefName']);
 
             $metadata = new MetadataBag();
 
@@ -156,36 +153,24 @@ class WriteMetadatasWorker implements WorkerInterface
                 $this->writer->setModule(Writer::MODULE_MWG, true);
             }
 
-            foreach ($subdefs as $name => $file) {
-                $this->writer->erase($name != 'document' || $clearDoc, true);
-                try {
-                    $this->writer->write($file, $metadata);
+            $this->writer->erase($subdef->get_name() != 'document' || $clearDoc, true);
 
-                    $this->messagePublisher->pushLog(sprintf('meta written for sbasid=%1$d - recordid=%2$d (%3$s)', $databox->get_sbas_id(), $recordId, $name));
-                } catch (PHPExiftoolException $e) {
-                    $this->logger->error(sprintf('meta NOT written for sbasid=%1$d - recordid=%2$d (%3$s) because "%s"', $databox->get_sbas_id(), $recordId, $name, $e->getMessage()));
-                }
+            // write meta in file
+            try {
+                $this->writer->write($subdef->getRealPath(), $metadata);
+
+                $this->messagePublisher->pushLog(sprintf('meta written for sbasid=%1$d - recordid=%2$d (%3$s)', $databox->get_sbas_id(), $recordId, $subdef->get_name() ));
+            } catch (PHPExiftoolException $e) {
+                $this->logger->error(sprintf('meta NOT written for sbasid=%1$d - recordid=%2$d (%3$s) because "%s"', $databox->get_sbas_id(), $recordId, $subdef->get_name() , $e->getMessage()));
+
+                $this->dispatch(WorkerPluginEvents::SUBDEFINITION_WRITE_META, new SubdefinitionWritemetaEvent($record, $payload['subdefName'], SubdefinitionWritemetaEvent::FAILED));
             }
 
             // mark write metas finished
             $this->updateJeton($record);
+
         }
 
-    }
-
-    /**
-     * @param \databox $databox
-     * @param string $subdefType
-     * @param string $subdefName
-     * @return bool
-     */
-    private function isSubdefMetadataUpdateRequired(\databox $databox, $subdefType, $subdefName)
-    {
-        if ($databox->get_subdef_structure()->hasSubdef($subdefType, $subdefName)) {
-            return $databox->get_subdef_structure()->get_subdef($subdefType, $subdefName)->isMetadataUpdateRequired();
-        }
-
-        return false;
     }
 
     private function removeNulChar($value)

@@ -3,11 +3,10 @@
 namespace Alchemy\WorkerPlugin\Worker;
 
 use Alchemy\Phrasea\Application\Helper\ApplicationBoxAware;
-use Alchemy\Phrasea\Core\Event\Record\MetadataChangedEvent;
-use Alchemy\Phrasea\Core\Event\Record\RecordEvents;
 use Alchemy\Phrasea\Core\PhraseaTokens;
 use Alchemy\Phrasea\Media\SubdefGenerator;
 use Alchemy\WorkerPlugin\Event\StoryCreateCoverEvent;
+use Alchemy\WorkerPlugin\Event\SubdefinitionWritemetaEvent;
 use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use Psr\Log\LoggerInterface;
@@ -41,8 +40,9 @@ class SubdefCreationWorker implements WorkerInterface
     public function process(array $payload)
     {
         if(isset($payload['recordId']) && isset($payload['databoxId'])) {
-            $recordId  = $payload['recordId'];
-            $databoxId = $payload['databoxId'];
+            $recordId       = $payload['recordId'];
+            $databoxId      = $payload['databoxId'];
+            $wantedSubdef   = [$payload['subdefName']];
 
             $record = $this->findDataboxById($databoxId)->get_record($recordId);
 
@@ -51,21 +51,23 @@ class SubdefCreationWorker implements WorkerInterface
             if (!$record->isStory()) {
                 $this->subdefGenerator->setLogger($this->logger);
 
-                $this->subdefGenerator->generateSubdefs($record);
+                $this->subdefGenerator->generateSubdefs($record, $wantedSubdef);
+                // order to write meta for the subdef if needed
+                $this->dispatcher->dispatch(WorkerPluginEvents::SUBDEFINITION_WRITE_META, new SubdefinitionWritemetaEvent($record, $payload['subdefName']));
 
                 $this->subdefGenerator->setLogger($oldLogger);
-
-                $this->dispatcher->dispatch(RecordEvents::METADATA_CHANGED, new MetadataChangedEvent($record));
 
                 //  update jeton when subdef is created
                 $this->updateJeton($record);
 
                 $parents = $record->get_grouping_parents();
 
-                if (!$parents->is_empty() && isset($payload['status']) && $payload['status'] == MessagePublisher::NEW_RECORD_MESSAGE) {
+                //  create a cover for a story
+                //  used when uploaded via uploader-service and grouped as a story
+                if (!$parents->is_empty() && isset($payload['status']) && $payload['status'] == MessagePublisher::NEW_RECORD_MESSAGE  && in_array($payload['subdefName'], array('thumbnail', 'preview'))) {
                     foreach ($parents->get_elements() as $story) {
                         if (self::checkIfFirstChild($story, $record)) {
-                            $data = implode('_', [$databoxId, $story->getRecordId(), $recordId]);
+                            $data = implode('_', [$databoxId, $story->getRecordId(), $recordId, $payload['subdefName']]);
 
                             $this->dispatcher->dispatch(WorkerPluginEvents::STORY_CREATE_COVER, new StoryCreateCoverEvent($data));
                         }
