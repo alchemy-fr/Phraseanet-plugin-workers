@@ -25,7 +25,6 @@ class MessageHandler
         $callback = function (AMQPMessage $message) use ($channel, $workerInvoker, $publisher) {
 
             $data = json_decode($message->getBody(), true);
-            $data['payload']['delivery_tag'] = $message->delivery_info['delivery_tag'];
 
             try {
                 $workerInvoker->invokeWorker($data['message_type'], json_encode($data['payload']));

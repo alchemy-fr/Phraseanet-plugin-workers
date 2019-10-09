@@ -86,21 +86,43 @@ class RecordSubscriber implements EventSubscriberInterface
 
     public function onMetadataChanged(MetadataChangedEvent $event)
     {
-        $mediaSubdefRepository = $this->getMediaSubdefRepository($event->getRecord()->getDataboxId());
-        $mediaSubdefs = $mediaSubdefRepository->findByRecordIdsAndNames([$event->getRecord()->getRecordId()]);
+        $databoxId = $event->getRecord()->getDataboxId();
+        $recordId = $event->getRecord()->getRecordId();
+
+        $mediaSubdefRepository = $this->getMediaSubdefRepository($databoxId);
+        $mediaSubdefs = $mediaSubdefRepository->findByRecordIdsAndNames([$recordId]);
+
+        $databox = $this->findDataboxById($databoxId);
+        $record  = $databox->get_record($recordId);
+        $type    = $record->getType();
 
         foreach ($mediaSubdefs as $subdef) {
-            if ($subdef->is_physically_present()) {
-                $payload = [
-                    'message_type' => MessagePublisher::WRITE_METADATAS_TYPE,
-                    'payload' => [
-                        'recordId'      => $event->getRecord()->getRecordId(),
-                        'databoxId'     => $event->getRecord()->getDataboxId(),
-                        'subdefName'    => $subdef->get_name()
-                    ]
-                ];
+            // check subdefmetadatarequired  from the subview setup in admin
+            if ( $subdef->get_name() == 'document' || $this->isSubdefMetadataUpdateRequired($databox, $type, $subdef->get_name())) {
+                if ($subdef->is_physically_present()) {
+                    $payload = [
+                        'message_type' => MessagePublisher::WRITE_METADATAS_TYPE,
+                        'payload' => [
+                            'recordId'      => $recordId,
+                            'databoxId'     => $databoxId,
+                            'subdefName'    => $subdef->get_name()
+                        ]
+                    ];
 
-                $this->messagePublisher->publishMessage($payload, MessagePublisher::METADATAS_QUEUE);
+                    $this->messagePublisher->publishMessage($payload, MessagePublisher::METADATAS_QUEUE);
+
+                } else {
+                    $payload = [
+                        'message_type' => MessagePublisher::WRITE_METADATAS_TYPE,
+                        'payload' => [
+                            'recordId'      => $recordId,
+                            'databoxId'     => $databoxId,
+                            'subdefName'    => $subdef->get_name()
+                        ]
+                    ];
+
+                    $this->messagePublisher->publishMessage($payload, MessagePublisher::RETRY_METADATAS_QUEUE);
+                }
             }
         }
 
@@ -119,16 +141,43 @@ class RecordSubscriber implements EventSubscriberInterface
 
     public function onSubdefinitionWritemeta(SubdefinitionWritemetaEvent $event)
     {
-        $payload = [
-            'message_type' => MessagePublisher::WRITE_METADATAS_TYPE,
-            'payload' => [
-                'recordId'      => $event->getRecord()->getRecordId(),
-                'databoxId'     => $event->getRecord()->getDataboxId(),
-                'subdefName'    => $event->getSubdefName()
-            ]
-        ];
+        if ($event->getStatus() == SubdefinitionWritemetaEvent::FAILED) {
+            $payload = [
+                'message_type' => MessagePublisher::WRITE_METADATAS_TYPE,
+                'payload' => [
+                    'recordId'      => $event->getRecord()->getRecordId(),
+                    'databoxId'     => $event->getRecord()->getDataboxId(),
+                    'subdefName'    => $event->getSubdefName()
+                ]
+            ];
 
-        $this->messagePublisher->publishMessage($payload, MessagePublisher::METADATAS_QUEUE);
+            $this->messagePublisher->publishMessage($payload, MessagePublisher::RETRY_METADATAS_QUEUE);
+
+        } else {
+            $databoxId = $event->getRecord()->getDataboxId();
+            $recordId = $event->getRecord()->getRecordId();
+
+            $databox = $this->findDataboxById($databoxId);
+            $record  = $databox->get_record($recordId);
+            $type    = $record->getType();
+
+            $subdef = $record->get_subdef($event->getSubdefName());
+
+            //  only the required writemetadata from admin > subview setup is to be writing
+            if ($subdef->get_name() == 'document' || $this->isSubdefMetadataUpdateRequired($databox, $type, $subdef->get_name())) {
+                $payload = [
+                    'message_type' => MessagePublisher::WRITE_METADATAS_TYPE,
+                    'payload' => [
+                        'recordId'      => $recordId,
+                        'databoxId'     => $databoxId,
+                        'subdefName'    => $event->getSubdefName()
+                    ]
+                ];
+
+                $this->messagePublisher->publishMessage($payload, MessagePublisher::METADATAS_QUEUE);
+            }
+        }
+
     }
 
     public static function getSubscribedEvents()
@@ -151,5 +200,20 @@ class RecordSubscriber implements EventSubscriberInterface
     private function getMediaSubdefRepository($databoxId)
     {
         return $this->app['provider.repo.media_subdef']->getRepositoryForDatabox($databoxId);
+    }
+
+    /**
+     * @param \databox $databox
+     * @param string $subdefType
+     * @param string $subdefName
+     * @return bool
+     */
+    private function isSubdefMetadataUpdateRequired(\databox $databox, $subdefType, $subdefName)
+    {
+        if ($databox->get_subdef_structure()->hasSubdef($subdefType, $subdefName)) {
+            return $databox->get_subdef_structure()->get_subdef($subdefType, $subdefName)->isMetadataUpdateRequired();
+        }
+
+        return false;
     }
 }

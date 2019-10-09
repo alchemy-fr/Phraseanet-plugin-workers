@@ -51,13 +51,9 @@ class SubdefCreationWorker implements WorkerInterface
             if (!$record->isStory()) {
                 $this->subdefGenerator->setLogger($this->logger);
 
-                try {
-                    $this->subdefGenerator->generateSubdefs($record, $wantedSubdef);
-                    $this->dispatcher->dispatch(WorkerPluginEvents::SUBDEFINITION_WRITE_META, new SubdefinitionWritemetaEvent($record, $payload['subdefName']));
-                } catch(\Exception $e) {
-                    //  mark as nack
-                    $this->messagePublisher->getChannel()->basic_nack($payload['delivery_tag']);
-                }
+                $this->subdefGenerator->generateSubdefs($record, $wantedSubdef);
+                // order to write meta for the subdef if needed
+                $this->dispatcher->dispatch(WorkerPluginEvents::SUBDEFINITION_WRITE_META, new SubdefinitionWritemetaEvent($record, $payload['subdefName']));
 
                 $this->subdefGenerator->setLogger($oldLogger);
 
