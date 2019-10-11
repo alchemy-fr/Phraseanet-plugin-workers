@@ -4,6 +4,8 @@ namespace Alchemy\WorkerPlugin\Subscriber;
 
 use Alchemy\Phrasea\Core\Event\ExportMailEvent;
 use Alchemy\Phrasea\Core\PhraseaEvents;
+use Alchemy\WorkerPlugin\Event\ExportMailFailureEvent;
+use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
@@ -32,10 +34,27 @@ class ExportSubscriber implements EventSubscriberInterface
         $this->messagePublisher->publishMessage($payload, MessagePublisher::EXPORT_QUEUE);
     }
 
+    public function onExportMailFailure(ExportMailFailureEvent $event)
+    {
+        $payload = [
+            'message_type' => MessagePublisher::EXPORT_MAIL_TYPE,
+            'payload' => [
+                'emitterUserId'     => $event->getEmitterUserId(),
+                'tokenValue'        => $event->getTokenValue(),
+                'destinationMails'  => serialize($event->getDestinationMails()),
+                'params'            => serialize($event->getParams())
+            ]
+        ];
+
+        $retryCount = 1;
+        $this->messagePublisher->publishMessage($payload, MessagePublisher::RETRY_EXPORT_QUEUE, $retryCount, $event->getWorkerMessage());
+    }
+
     public static function getSubscribedEvents()
     {
         return [
-            PhraseaEvents::EXPORT_MAIL_CREATE => 'onExportMailCreate'
+            PhraseaEvents::EXPORT_MAIL_CREATE       => 'onExportMailCreate',
+            WorkerPluginEvents::EXPORT_MAIL_FAILURE => 'onExportMailFailure'
         ];
     }
 }

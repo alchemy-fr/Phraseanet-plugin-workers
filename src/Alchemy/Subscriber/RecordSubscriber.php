@@ -73,7 +73,8 @@ class RecordSubscriber implements EventSubscriberInterface
             ]
         ];
 
-        $this->messagePublisher->publishMessage($payload, MessagePublisher::RETRY_SUBDEF_QUEUE);
+        $retryCount = 1;
+        $this->messagePublisher->publishMessage($payload, MessagePublisher::RETRY_SUBDEF_QUEUE, $retryCount);
     }
 
     public function onRecordCreated(RecordEvent $event)
@@ -121,7 +122,13 @@ class RecordSubscriber implements EventSubscriberInterface
                         ]
                     ];
 
-                    $this->messagePublisher->publishMessage($payload, MessagePublisher::RETRY_METADATAS_QUEUE);
+                    $retryCount = 1;
+                    $this->messagePublisher->publishMessage(
+                        $payload,
+                        MessagePublisher::RETRY_METADATAS_QUEUE,
+                        $retryCount,
+                        'Subdef is not physically present!'
+                    );
                 }
             }
         }
@@ -151,7 +158,13 @@ class RecordSubscriber implements EventSubscriberInterface
                 ]
             ];
 
-            $this->messagePublisher->publishMessage($payload, MessagePublisher::RETRY_METADATAS_QUEUE);
+            $retryCount = 1;
+            $this->messagePublisher->publishMessage(
+                $payload,
+                MessagePublisher::RETRY_METADATAS_QUEUE,
+                $retryCount,
+                $event->getWorkerMessage()
+            );
 
         } else {
             $databoxId = $event->getRecord()->getDataboxId();

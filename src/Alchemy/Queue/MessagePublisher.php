@@ -4,6 +4,7 @@ namespace Alchemy\WorkerPlugin\Queue;
 
 use Monolog\Logger;
 use PhpAmqpLib\Message\AMQPMessage;
+use PhpAmqpLib\Wire\AMQPTable;
 use Psr\Log\LoggerInterface;
 
 class MessagePublisher
@@ -52,9 +53,29 @@ class MessagePublisher
         $this->logger           = $logger;
     }
 
-    public function publishMessage(array $payload, $queueName)
+    public function publishMessage(array $payload, $queueName, $retryCount = null, $workerMessage = '')
     {
         $msg = new AMQPMessage(json_encode($payload));
+        $routing = array_search($queueName, AMQPConnection::$dafaultRetryQueues);
+
+        if (count($retryCount) && $routing != false) {
+            // ad a message header information
+            $headers = new AMQPTable([
+                'x-death' => [
+                    [
+                        'count'         => $retryCount,
+                        'exchange'      => AMQPConnection::ALCHEMY_EXCHANGE,
+                        'queue'         => $routing,
+                        'routing-keys'  => $routing,
+                        'reason'        => 'rejected',   // rejected is sended like nack
+                        'time'          => new \DateTime('now', new \DateTimeZone('UTC'))
+                    ]
+                ],
+                'worker-message' => $workerMessage
+            ]);
+
+            $msg->set('application_headers', $headers);
+        }
 
         $channel = $this->serverConnection->setQueue($queueName);
 

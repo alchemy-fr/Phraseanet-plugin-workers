@@ -2,18 +2,19 @@
 
 namespace Alchemy\WorkerPlugin\Worker;
 
-use Alchemy\Phrasea\Application;
 use Alchemy\Phrasea\Application\Helper\ApplicationBoxAware;
+use Alchemy\Phrasea\Application\Helper\DispatcherAware;
 use Alchemy\Phrasea\SearchEngine\Elastic\ElasticsearchOptions;
 use Alchemy\Phrasea\SearchEngine\Elastic\Indexer;
+use Alchemy\WorkerPlugin\Event\PopulateIndexFailureEvent;
+use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
 use Alchemy\WorkerPlugin\Model\DBManipulator;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 
 class PopulateIndexWorker implements WorkerInterface
 {
     use ApplicationBoxAware;
-
-    private $app;
+    use DispatcherAware;
 
     /** @var MessagePublisher $messagePublisher */
     private $messagePublisher;
@@ -43,7 +44,16 @@ class PopulateIndexWorker implements WorkerInterface
         $indexExists = $this->indexer->indexExists();
 
         if (!$indexExists) {
-            $this->messagePublisher->pushLog(sprintf("Index %s don't exist!", $payload['indexName']));
+            $workerMessage = sprintf("Index %s don't exist!", $payload['indexName']);
+            $this->messagePublisher->pushLog($workerMessage);
+            // send to retry queue
+            $this->dispatch(WorkerPluginEvents::POPULATE_INDEX_FAILURE, new PopulateIndexFailureEvent(
+                $payload['host'],
+                $payload['port'],
+                $payload['indexName'],
+                $payload['databoxId'],
+                $workerMessage
+            ));
         } else {
             $databox = $this->findDataboxById($databoxId);
 
@@ -59,9 +69,18 @@ class PopulateIndexWorker implements WorkerInterface
             } catch(\Exception $e) {
                 DBManipulator::deletePopulateStatus($payload);
 
-                $this->messagePublisher->pushLog(sprintf("Error on indexing : %s ", $e->getMessage()));
-            }
+                $workerMessage = sprintf("Error on indexing : %s ", $e->getMessage());
+                $this->messagePublisher->pushLog($workerMessage);
 
+                // notify to send a retry
+                $this->dispatch(WorkerPluginEvents::POPULATE_INDEX_FAILURE, new PopulateIndexFailureEvent(
+                    $payload['host'],
+                    $payload['port'],
+                    $payload['indexName'],
+                    $payload['databoxId'],
+                    $workerMessage
+                ));
+            }
         }
 
         // delete entry in populate_running

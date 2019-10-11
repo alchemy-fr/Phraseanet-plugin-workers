@@ -12,6 +12,8 @@ use Alchemy\Phrasea\Model\Repositories\UserRepository;
 use Alchemy\Phrasea\Notification\Emitter;
 use Alchemy\Phrasea\Notification\Mail\MailRecordsExport;
 use Alchemy\Phrasea\Notification\Receiver;
+use Alchemy\WorkerPlugin\Event\ExportMailFailureEvent;
+use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
 
 class ExportMailWorker implements WorkerInterface
 {
@@ -72,6 +74,15 @@ class ExportMailWorker implements WorkerInterface
 
         //some mails failed
         if (count($remaingEmails) > 0) {
+            //  notify to send to the retry queue
+            $this->app['dispatcher']->dispatch(WorkerPluginEvents::EXPORT_MAIL_FAILURE, new ExportMailFailureEvent(
+                $payload['emitterUserId'],
+                $payload['tokenValue'],
+                $remaingEmails,
+                $payload['params'],
+                'some mails failed'
+            ));
+
             foreach ($remaingEmails as $mail) {
                 $this->app['dispatcher']->dispatch(PhraseaEvents::EXPORT_MAIL_FAILURE, new ExportFailureEvent(
                         $user,

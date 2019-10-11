@@ -87,7 +87,8 @@ class WorkerServiceProvider implements PluginProviderInterface
         }));
 
         $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::WEBHOOK_TYPE, new CallableWorkerFactory(function () use ($app) {
-            return new WebhookWorker($app);
+            return (new WebhookWorker($app))
+                ->setDispatcher($app['dispatcher']);
         }));
 
         $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::CREATE_RECORD_TYPE, new CallableWorkerFactory(function () use ($app) {
@@ -102,7 +103,8 @@ class WorkerServiceProvider implements PluginProviderInterface
 
         $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::POPULATE_INDEX_TYPE, new CallableWorkerFactory(function () use ($app) {
             return (new PopulateIndexWorker($app['alchemy_service.message.publisher'], $app['elasticsearch.indexer']))
-                ->setApplicationBox($app['phraseanet.appbox']);
+                ->setApplicationBox($app['phraseanet.appbox'])
+                ->setDispatcher($app['dispatcher']);
         }));
 
     }
@@ -121,6 +123,5 @@ class WorkerServiceProvider implements PluginProviderInterface
     {
         return new static();
     }
-
 
 }

@@ -13,7 +13,6 @@ namespace Alchemy\WorkerPlugin\Provider;
 
 use Alchemy\Phrasea\Core\Configuration\PropertyAccess;
 
-use Alchemy\Phrasea\Core\Event\Record\RecordEvents;
 use Alchemy\Phrasea\Core\Event\Subscriber\ExportSubscriber as ExportMailSubscriber;
 use Alchemy\Phrasea\Core\PhraseaEvents;
 use Alchemy\Phrasea\Model\Manipulator\WebhookEventManipulator;
@@ -27,6 +26,7 @@ use Alchemy\WorkerPlugin\Subscriber\AssetsIngestSubscriber;
 use Alchemy\WorkerPlugin\Subscriber\ExportSubscriber;
 use Alchemy\WorkerPlugin\Subscriber\RecordSubscriber;
 use Alchemy\WorkerPlugin\Subscriber\SearchengineSubscriber;
+use Alchemy\WorkerPlugin\Subscriber\WebhookSubscriber;
 use Silex\Application;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
@@ -94,6 +94,7 @@ class QueueServiceProvider implements PluginProviderInterface
                 $dispatcher->addSubscriber(new ExportSubscriber($app['alchemy_service.message.publisher']));
                 $dispatcher->addSubscriber(new AssetsIngestSubscriber($app['alchemy_service.message.publisher']));
                 $dispatcher->addSubscriber(new SearchengineSubscriber($app['alchemy_service.message.publisher']));
+                $dispatcher->addSubscriber(new WebhookSubscriber($app['alchemy_service.message.publisher']));
 
                 return $dispatcher;
             })

@@ -3,11 +3,14 @@
 namespace Alchemy\WorkerPlugin\Worker;
 
 use Alchemy\Phrasea\Application;
+use Alchemy\Phrasea\Application\Helper\DispatcherAware;
 use Alchemy\Phrasea\Core\Version;
 use Alchemy\Phrasea\Model\Entities\ApiApplication;
 use Alchemy\Phrasea\Model\Entities\WebhookEvent;
 use Alchemy\Phrasea\Model\Entities\WebhookEventDelivery;
 use Alchemy\Phrasea\Webhook\Processor\ProcessorInterface;
+use Alchemy\WorkerPlugin\Event\WebhookDeliverFailureEvent;
+use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use Guzzle\Batch\BatchBuilder;
 use Guzzle\Common\Event;
@@ -20,6 +23,8 @@ use Guzzle\Plugin\Backoff\TruncatedBackoffStrategy;
 
 class WebhookWorker implements WorkerInterface
 {
+    use DispatcherAware;
+
     private $app;
 
     /** @var MessagePublisher  $messagePublisher */
@@ -37,6 +42,7 @@ class WebhookWorker implements WorkerInterface
     public function process(array $payload)
     {
         if (isset($payload['id'])) {
+            $webhookEventId = $payload['id'];
             $app = $this->app;
 
             $httpClient = new GuzzleClient();
@@ -50,7 +56,7 @@ class WebhookWorker implements WorkerInterface
             }, -254);
 
             // Set callback which logs success or failure
-            $subscriber = new CallbackBackoffStrategy(function ($retries, Request $request, $response, $e) use ($app) {
+            $subscriber = new CallbackBackoffStrategy(function ($retries, Request $request, $response, $e) use ($app, $webhookEventId) {
                 $retry = true;
                 if ($response && (null !== $deliverId = parse_url($request->getUrl(), PHP_URL_FRAGMENT))) {
                     /** @var WebhookEventDelivery $delivery */
@@ -76,6 +82,8 @@ class WebhookWorker implements WorkerInterface
                             $delivery->getWebhookEvent()->getId(), $delivery->getWebhookEvent()->getName(),
                             $delivery->getThirdPartyApplication()->getName()
                         );
+
+                        $this->dispatch(WorkerPluginEvents::WEBHOOK_DELIVER_FAILURE, new WebhookDeliverFailureEvent($webhookEventId, $logEntry));
                     }
 
                     $app['alchemy_service.message.publisher']->pushLog($logEntry, $logType, $logContext);
@@ -85,7 +93,7 @@ class WebhookWorker implements WorkerInterface
             }, true, new CurlBackoffStrategy());
 
             // set max retries
-            $subscriber = new TruncatedBackoffStrategy(WebhookEventDelivery::MAX_DELIVERY_TRIES, $subscriber);
+            $subscriber = new TruncatedBackoffStrategy(1, $subscriber);
             $subscriber = new BackoffPlugin($subscriber);
 
             $httpClient->addSubscriber($subscriber);
@@ -94,7 +102,7 @@ class WebhookWorker implements WorkerInterface
             $thirdPartyApplications = $this->app['repo.api-applications']->findWithDefinedWebhookCallback();
 
             /** @var WebhookEvent|null $webhookevent */
-            $webhookevent = $this->app['repo.webhook-event']->find($payload['id']);
+            $webhookevent = $this->app['repo.webhook-event']->find($webhookEventId);
 
             if ($webhookevent !== null) {
                 $app['manipulator.webhook-event']->processed($webhookevent);
@@ -109,7 +117,10 @@ class WebhookWorker implements WorkerInterface
     private function deliverEvent(GuzzleClient $httpClient, array $thirdPartyApplications, WebhookEvent $webhookevent)
     {
         if (count($thirdPartyApplications) === 0) {
-            $this->messagePublisher->pushLog(sprintf('No applications defined to listen for webhook events'));
+            $workerMessage = 'No applications defined to listen for webhook events';
+            $this->messagePublisher->pushLog($workerMessage);
+
+            $this->dispatch(WorkerPluginEvents::WEBHOOK_DELIVER_FAILURE, new WebhookDeliverFailureEvent($webhookevent->getId(), $workerMessage));
 
             return;
         }

@@ -26,6 +26,16 @@ class MessageHandler
 
             $data = json_decode($message->getBody(), true);
 
+//  TODO: if needed , retrieve message header and check count
+
+//            /** @var AMQPTable $headers */
+//            $headers = $message->get('application_headers');
+//            $headerData = $headers->getNativeData();
+//
+//            $xDeatth = $headers['x-death'];
+//
+//            print_r($xDeatth);
+
             try {
                 $workerInvoker->invokeWorker($data['message_type'], json_encode($data['payload']));
 

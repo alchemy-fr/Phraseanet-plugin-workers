@@ -13,8 +13,6 @@ use Alchemy\Phrasea\Border\Attribute\Status;
 use Alchemy\Phrasea\Border\File;
 use Alchemy\Phrasea\Border\Visa;
 use Alchemy\Phrasea\Core\Event\LazaretEvent;
-use Alchemy\Phrasea\Core\Event\Record\RecordEvents;
-use Alchemy\Phrasea\Core\Event\Record\StoryCoverChangedEvent;
 use Alchemy\Phrasea\Core\Event\RecordEdit;
 use Alchemy\Phrasea\Core\PhraseaEvents;
 use Alchemy\Phrasea\Media\SubdefSubstituer;
@@ -22,10 +20,11 @@ use Alchemy\Phrasea\Model\Entities\LazaretFile;
 use Alchemy\Phrasea\Model\Entities\LazaretSession;
 use Alchemy\Phrasea\Model\Entities\User;
 use Alchemy\Phrasea\Model\Repositories\UserRepository;
+use Alchemy\WorkerPlugin\Event\AssetsCreationRecordFailureEvent;
+use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
 use Alchemy\WorkerPlugin\Model\DBManipulator;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use GuzzleHttp\Client;
-use PDO;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class CreateRecordWorker implements WorkerInterface
@@ -65,15 +64,35 @@ class CreateRecordWorker implements WorkerInterface
         $tempfile = $this->getTemporaryFilesystem()->createTemporaryFile('download_', null, pathinfo($body['originalName'], PATHINFO_EXTENSION));
 
         //download the asset
-        $res = $uploaderClient->get('/assets/'.$payload['asset'].'/download', [
-            'headers' => [
-                'Authorization' => 'AssetToken '.$payload['assetToken']
-            ],
-            'save_to' => $tempfile
-        ]);
+        try {
+            $res = $uploaderClient->get('/assets/'.$payload['asset'].'/download', [
+                'headers' => [
+                    'Authorization' => 'AssetToken '.$payload['assetToken']
+                ],
+                'save_to' => $tempfile
+            ]);
+        } catch (\Exception $e) {
+            //  send to retry queue
+            $this->dispatch(WorkerPluginEvents::ASSETS_CREATION_RECORD_FAILURE, new AssetsCreationRecordFailureEvent(
+                $payload,
+                'Error when downloading assets!'
+            ));
+
+            return;
+        }
+
 
         if ($res->getStatusCode() !== 200) {
-            $this->logger->error(sprintf('Error %s downloading "%s"', $res->getStatusCode(), $payload['base_url'].'/assets/'.$payload['asset'].'/download'));
+            $workerMessage = sprintf('Error %s downloading "%s"', $res->getStatusCode(), $payload['base_url'].'/assets/'.$payload['asset'].'/download');
+            $this->logger->error($workerMessage);
+
+            //  send to retry queue
+            $this->dispatch(WorkerPluginEvents::ASSETS_CREATION_RECORD_FAILURE, new AssetsCreationRecordFailureEvent(
+                $payload,
+                $workerMessage
+            ));
+
+            return;
         }
 
         $remainingAssets = DBManipulator::updateRemainingAssetsListByCommit($payload['commit_id'], $payload['asset']);
@@ -165,7 +184,18 @@ class CreateRecordWorker implements WorkerInterface
             $elementCreated = $element;
         };
 
-        $this->getBorderManager()->process($lazaretSession, $packageFile, $callback);
+        try {
+            $this->getBorderManager()->process($lazaretSession, $packageFile, $callback);
+        } catch (\Exception $e) {
+            //  send to retry queue
+            $this->dispatch(WorkerPluginEvents::ASSETS_CREATION_RECORD_FAILURE, new AssetsCreationRecordFailureEvent(
+                $payload,
+                'Error when creating record to phraseanet!'
+            ));
+
+            return ;
+        }
+
 
         if ($elementCreated instanceof \record_adapter) {
             $this->dispatch(PhraseaEvents::RECORD_UPLOAD, new RecordEdit($elementCreated));
