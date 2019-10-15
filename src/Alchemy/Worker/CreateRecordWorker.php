@@ -72,10 +72,13 @@ class CreateRecordWorker implements WorkerInterface
                 'save_to' => $tempfile
             ]);
         } catch (\Exception $e) {
+            $count = isset($payload['count']) ? $payload['count'] + 1 : 2 ;
+
             //  send to retry queue
             $this->dispatch(WorkerPluginEvents::ASSETS_CREATION_RECORD_FAILURE, new AssetsCreationRecordFailureEvent(
                 $payload,
-                'Error when downloading assets!'
+                'Error when downloading assets!',
+                $count
             ));
 
             return;
@@ -86,10 +89,13 @@ class CreateRecordWorker implements WorkerInterface
             $workerMessage = sprintf('Error %s downloading "%s"', $res->getStatusCode(), $payload['base_url'].'/assets/'.$payload['asset'].'/download');
             $this->logger->error($workerMessage);
 
+            $count = isset($payload['count']) ? $payload['count'] + 1 : 2 ;
+
             //  send to retry queue
             $this->dispatch(WorkerPluginEvents::ASSETS_CREATION_RECORD_FAILURE, new AssetsCreationRecordFailureEvent(
                 $payload,
-                $workerMessage
+                $workerMessage,
+                $count
             ));
 
             return;
@@ -184,17 +190,7 @@ class CreateRecordWorker implements WorkerInterface
             $elementCreated = $element;
         };
 
-        try {
-            $this->getBorderManager()->process($lazaretSession, $packageFile, $callback);
-        } catch (\Exception $e) {
-            //  send to retry queue
-            $this->dispatch(WorkerPluginEvents::ASSETS_CREATION_RECORD_FAILURE, new AssetsCreationRecordFailureEvent(
-                $payload,
-                'Error when creating record to phraseanet!'
-            ));
-
-            return ;
-        }
+        $this->getBorderManager()->process($lazaretSession, $packageFile, $callback);
 
 
         if ($elementCreated instanceof \record_adapter) {

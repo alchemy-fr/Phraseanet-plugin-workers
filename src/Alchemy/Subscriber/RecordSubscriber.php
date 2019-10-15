@@ -111,7 +111,6 @@ class RecordSubscriber implements EventSubscriberInterface
                     ];
 
                     $this->messagePublisher->publishMessage($payload, MessagePublisher::METADATAS_QUEUE);
-
                 } else {
                     $payload = [
                         'message_type' => MessagePublisher::WRITE_METADATAS_TYPE,
@@ -122,11 +121,10 @@ class RecordSubscriber implements EventSubscriberInterface
                         ]
                     ];
 
-                    $retryCount = 1;
                     $this->messagePublisher->publishMessage(
                         $payload,
                         MessagePublisher::RETRY_METADATAS_QUEUE,
-                        $retryCount,
+                        2,
                         'Subdef is not physically present!'
                     );
                 }
@@ -158,11 +156,10 @@ class RecordSubscriber implements EventSubscriberInterface
                 ]
             ];
 
-            $retryCount = 1;
             $this->messagePublisher->publishMessage(
                 $payload,
                 MessagePublisher::RETRY_METADATAS_QUEUE,
-                $retryCount,
+                $event->getCount(),
                 $event->getWorkerMessage()
             );
 

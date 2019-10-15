@@ -46,8 +46,12 @@ class ExportSubscriber implements EventSubscriberInterface
             ]
         ];
 
-        $retryCount = 1;
-        $this->messagePublisher->publishMessage($payload, MessagePublisher::RETRY_EXPORT_QUEUE, $retryCount, $event->getWorkerMessage());
+        $this->messagePublisher->publishMessage(
+            $payload,
+            MessagePublisher::RETRY_EXPORT_QUEUE,
+            $event->getCount(),
+            $event->getWorkerMessage()
+        );
     }
 
     public static function getSubscribedEvents()

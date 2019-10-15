@@ -1,9 +1,34 @@
 <h3> Configuration Worker-Plugin</h3>
 
+<p>Set up the delay between two attempts per queue!</p>
 {{ form_start(form, {'action': path('worker_plugin_admin_configuration')}) }}
 
 <div class="control-group">
-    {{ form_row(form.config) }}
+    {{ form_row(form.assetsIngest) }}
+</div>
+
+<div class="control-group">
+    {{ form_row(form.createRecord) }}
+</div>
+
+<div class="control-group">
+    {{ form_row(form.subdefCreation) }}
+</div>
+
+<div class="control-group">
+    {{ form_row(form.writeMetadatas) }}
+</div>
+
+<div class="control-group">
+    {{ form_row(form.webhook) }}
+</div>
+
+<div class="control-group">
+    {{ form_row(form.exportMail) }}
+</div>
+
+<div class="control-group">
+    {{ form_row(form.populateIndex) }}
 </div>
 
 <div class="control-group">

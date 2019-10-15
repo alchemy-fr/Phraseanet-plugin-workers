@@ -21,7 +21,7 @@ class ConfigurationTab implements ConfigurationTabInterface
 
     public function getTitle()
     {
-        return 'configuration_tab';
+        return 'Plugin configuration';
     }
 
     public function getUrl()

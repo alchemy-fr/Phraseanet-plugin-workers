@@ -46,15 +46,14 @@ class SearchengineSubscriber implements EventSubscriberInterface
                 'host'      => $event->getHost(),
                 'port'      => $event->getPort(),
                 'indexName' => $event->getIndexName(),
-                'databoxId' => $event->getDataboxId()
+                'databoxId' => $event->getDataboxId(),
             ]
         ];
 
-        $retryCount = 1;
         $this->messagePublisher->publishMessage(
             $payload,
             MessagePublisher::RETRY_POPULATE_INDEX_QUEUE,
-            $retryCount,
+            $event->getCount(),
             $event->getWorkerMessage()
         );
     }

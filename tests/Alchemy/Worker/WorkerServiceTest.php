@@ -7,13 +7,11 @@ use Alchemy\WorkerPlugin\Worker\AssetsIngestWorker;
 use Alchemy\WorkerPlugin\Worker\CreateRecordWorker;
 use Alchemy\WorkerPlugin\Worker\ExportMailWorker;
 use Alchemy\WorkerPlugin\Worker\SubdefCreationWorker;
-use Alchemy\WorkerPlugin\Worker\WriteLogsWorker;
 use Alchemy\WorkerPlugin\Worker\WriteMetadatasWorker;
 
 /**
  * @covers Alchemy\WorkerPlugin\Worker\ExportMailWorker
  * @covers Alchemy\WorkerPlugin\Worker\SubdefCreationWorker
- * @covers Alchemy\WorkerPlugin\Worker\WriteLogsWorker
  * @covers Alchemy\WorkerPlugin\Worker\WriteMetadatasWorker
  */
 class WorkerServiceTest extends \PHPUnit_Framework_TestCase
@@ -38,11 +36,6 @@ class WorkerServiceTest extends \PHPUnit_Framework_TestCase
             $app['dispatcher']
             );
         $this->assertInstanceOf('Alchemy\\WorkerPlugin\\Worker\\WorkerInterface', $subdefCreationWorker);
-
-
-        $writeLogsWorker = new WriteLogsWorker($app['alchemy_service.logger']);
-        $this->assertInstanceOf('Alchemy\\WorkerPlugin\\Worker\\WorkerInterface', $writeLogsWorker);
-
 
         $writemetadatasWorker = new WriteMetadatasWorker($writer, $app['alchemy_service.logger'], $app['alchemy_service.message.publisher']);
         $this->assertInstanceOf('Alchemy\\WorkerPlugin\\Worker\\WorkerInterface', $writemetadatasWorker);

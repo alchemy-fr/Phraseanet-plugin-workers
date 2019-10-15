@@ -165,22 +165,28 @@ class WriteMetadatasWorker implements WorkerInterface
                     $workerMessage = sprintf('meta NOT written for sbasid=%1$d - recordid=%2$d (%3$s) because "%s"', $databox->get_sbas_id(), $recordId, $subdef->get_name() , $e->getMessage());
                     $this->logger->error($workerMessage);
 
+                    $count = isset($payload['count']) ? $payload['count'] + 1 : 2 ;
+
                     $this->dispatch(WorkerPluginEvents::SUBDEFINITION_WRITE_META, new SubdefinitionWritemetaEvent(
                         $record,
                         $payload['subdefName'],
                         SubdefinitionWritemetaEvent::FAILED,
-                        $workerMessage
+                        $workerMessage,
+                        $count
                     ));
                 }
 
                 // mark write metas finished
                 $this->updateJeton($record);
             } else {
+                $count = isset($payload['count']) ? $payload['count'] + 1 : 2 ;
+
                 $this->dispatch(WorkerPluginEvents::SUBDEFINITION_WRITE_META, new SubdefinitionWritemetaEvent(
                     $record,
                     $payload['subdefName'],
                     SubdefinitionWritemetaEvent::FAILED,
-                    'Subdef is not physically present!'
+                    'Subdef is not physically present!',
+                    $count
                 ));
             }
         }

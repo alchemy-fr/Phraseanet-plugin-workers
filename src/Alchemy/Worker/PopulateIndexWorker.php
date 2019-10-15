@@ -46,13 +46,17 @@ class PopulateIndexWorker implements WorkerInterface
         if (!$indexExists) {
             $workerMessage = sprintf("Index %s don't exist!", $payload['indexName']);
             $this->messagePublisher->pushLog($workerMessage);
+
+            $count = isset($payload['count']) ? $payload['count'] + 1 : 2 ;
+
             // send to retry queue
             $this->dispatch(WorkerPluginEvents::POPULATE_INDEX_FAILURE, new PopulateIndexFailureEvent(
                 $payload['host'],
                 $payload['port'],
                 $payload['indexName'],
                 $payload['databoxId'],
-                $workerMessage
+                $workerMessage,
+                $count
             ));
         } else {
             $databox = $this->findDataboxById($databoxId);
@@ -72,13 +76,16 @@ class PopulateIndexWorker implements WorkerInterface
                 $workerMessage = sprintf("Error on indexing : %s ", $e->getMessage());
                 $this->messagePublisher->pushLog($workerMessage);
 
+                $count = isset($payload['count']) ? $payload['count'] + 1 : 2 ;
+
                 // notify to send a retry
                 $this->dispatch(WorkerPluginEvents::POPULATE_INDEX_FAILURE, new PopulateIndexFailureEvent(
                     $payload['host'],
                     $payload['port'],
                     $payload['indexName'],
                     $payload['databoxId'],
-                    $workerMessage
+                    $workerMessage,
+                    $count
                 ));
             }
         }

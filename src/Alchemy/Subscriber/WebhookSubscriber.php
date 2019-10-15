@@ -19,20 +19,24 @@ class WebhookSubscriber implements EventSubscriberInterface
 
     public function onWebhookDeliverFailure(WebhookDeliverFailureEvent $event)
     {
-        $payload = [
-            'message_type' => MessagePublisher::WEBHOOK_TYPE,
-            'payload' => [
-                'id' => $event->getWebhookEventId()
-            ]
-        ];
+        // count = 0  mean do not retry because no api application defined
+        if ($event->getCount() != 0) {
+            $payload = [
+                'message_type' => MessagePublisher::WEBHOOK_TYPE,
+                'payload' => [
+                    'id'        => $event->getWebhookEventId(),
+                    'uniqueUrl' => $event->getUniqueUrl(),
+                ]
+            ];
 
-        $retryCount = 1;
-        $this->messagePublisher->publishMessage(
-            $payload,
-            MessagePublisher::RETRY_WEBHOOK_QUEUE,
-            $retryCount,
-            $event->getWorkerMessage()
-        );
+            $this->messagePublisher->publishMessage(
+                $payload,
+                MessagePublisher::RETRY_WEBHOOK_QUEUE,
+                $event->getCount(),
+                $event->getWorkerMessage()
+            );
+        }
+
     }
 
     public static function getSubscribedEvents()

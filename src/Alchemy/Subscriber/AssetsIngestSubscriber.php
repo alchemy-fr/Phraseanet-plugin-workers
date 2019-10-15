@@ -36,11 +36,10 @@ class AssetsIngestSubscriber implements EventSubscriberInterface
             'payload'       => $event->getPayload()
         ];
 
-        $retryCount = 1;
         $this->messagePublisher->publishMessage(
             $payload,
             MessagePublisher::RETRY_ASSETS_INGEST_QUEUE,
-            $retryCount,
+            $event->getCount(),
             $event->getWorkerMessage()
         );
     }
@@ -52,11 +51,10 @@ class AssetsIngestSubscriber implements EventSubscriberInterface
             'payload'       => $event->getPayload()
         ];
 
-        $retryCount = 1;
         $this->messagePublisher->publishMessage(
             $payload,
             MessagePublisher::RETRY_CREATE_RECORD_QUEUE,
-            $retryCount,
+            $event->getCount(),
             $event->getWorkerMessage()
         );
     }

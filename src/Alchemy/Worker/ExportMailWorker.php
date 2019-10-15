@@ -74,13 +74,16 @@ class ExportMailWorker implements WorkerInterface
 
         //some mails failed
         if (count($remaingEmails) > 0) {
+            $count = isset($payload['count']) ? $payload['count'] + 1 : 2 ;
+
             //  notify to send to the retry queue
             $this->app['dispatcher']->dispatch(WorkerPluginEvents::EXPORT_MAIL_FAILURE, new ExportMailFailureEvent(
                 $payload['emitterUserId'],
                 $payload['tokenValue'],
                 $remaingEmails,
                 $payload['params'],
-                'some mails failed'
+                'some mails failed',
+                $count
             ));
 
             foreach ($remaingEmails as $mail) {
