@@ -145,7 +145,22 @@ class WebhookWorker implements WorkerInterface
             ->transferRequests(10)
             ->build();
 
+        /** @var ApiApplication $thirdPartyApplication */
         foreach ($thirdPartyApplications as $thirdPartyApplication) {
+            $creator = $thirdPartyApplication->getCreator();
+
+            if ($creator == null) {
+                continue;
+            }
+
+            $creatorGrantedBaseIds = array_keys($this->app['acl']->get($creator)->get_granted_base());
+
+            $concernedBaseIds = array_intersect($webhookevent->getCollectionBaseIds(), $creatorGrantedBaseIds);
+
+            if (count($webhookevent->getCollectionBaseIds()) != 0 && count($concernedBaseIds) == 0) {
+                continue;
+            }
+
             if (isset($payload['uniqueUrl'])) {
                 $deliverId = parse_url($payload['uniqueUrl'], PHP_URL_FRAGMENT);
                 /** @var WebhookEventDelivery $delivery */

@@ -16,8 +16,10 @@ use Alchemy\WorkerPlugin\Configuration\SearchengineTab;
 use Alchemy\WorkerPlugin\Configuration\SubviewTab;
 use Alchemy\WorkerPlugin\Controller\AdminConfigurationController;
 use Alchemy\WorkerPlugin\Controller\ApiServiceController;
+use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use Alchemy\WorkerPlugin\Security\WorkerPluginConfigurationVoter;
 use Silex\Application;
+use Symfony\Component\HttpFoundation\Request;
 
 class ControllerServiceProvider extends Api implements PluginProviderInterface
 {
@@ -53,6 +55,8 @@ class ControllerServiceProvider extends Api implements PluginProviderInterface
 
         $app->post('/api/v1/upload/enqueue/', 'controller.api.service:sendAssetsInQueue')
             ->before(new OAuthListener());
+
+        $app->post('/webhook', array($this, 'getWebhookData'));
 
         // register translator resource
         $app['translator'] = $app->share(
@@ -93,6 +97,14 @@ class ControllerServiceProvider extends Api implements PluginProviderInterface
     public static function create(PhraseaApplication $app)
     {
         return new static();
+    }
+
+    public function getWebhookData(Application $app, Request $request)
+    {
+        $messagePubliser = $this->getMessagePublisher($app);
+        $messagePubliser->pushLog("RECEIVED ON phraseanet WEBHOOK URL TEST = ". $request->getUri() . " DATA : ". $request->getContent());
+
+        return 0;
     }
 
     /**
@@ -186,5 +198,14 @@ class ControllerServiceProvider extends Api implements PluginProviderInterface
     private function getFirewall(Application $app)
     {
         return $app['firewall'];
+    }
+
+    /**
+     * @param Application $app
+     * @return MessagePublisher
+     */
+    private function getMessagePublisher(Application $app)
+    {
+        return $app['alchemy_service.message.publisher'];
     }
 }
