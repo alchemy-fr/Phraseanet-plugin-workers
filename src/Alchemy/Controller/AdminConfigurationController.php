@@ -33,7 +33,8 @@ class AdminConfigurationController extends Controller
 
         if ($form->isValid()) {
             // only changed value in the form
-            $newTtlChanged = array_diff_assoc($form->getData(), $config['worker_plugin']);
+            $config = isset($config['worker_plugin']) ? $config['worker_plugin'] : [];
+            $newTtlChanged = array_diff_assoc($form->getData(), $config);
 
             if ($newTtlChanged) {
                 Config::setConfiguration($form->getData());
