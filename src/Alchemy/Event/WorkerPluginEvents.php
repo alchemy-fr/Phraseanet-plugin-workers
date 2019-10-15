@@ -14,6 +14,7 @@ final class WorkerPluginEvents
     const POPULATE_INDEX_FAILURE            = "populate.index_failure";
 
     const SUBDEFINITION_WRITE_META          = 'subdefinition.write_meta';
+    const SUBDEFINITION_CREATION_FAILURE    = 'subdefinition.creation_failure';
 
     const EXPORT_MAIL_FAILURE               = 'export.mail_failure';
 

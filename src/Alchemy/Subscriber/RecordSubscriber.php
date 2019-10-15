@@ -8,9 +8,9 @@ use Alchemy\Phrasea\Core\Event\Record\MetadataChangedEvent;
 use Alchemy\Phrasea\Core\Event\Record\RecordEvent;
 use Alchemy\Phrasea\Core\Event\Record\RecordEvents;
 use Alchemy\Phrasea\Core\Event\Record\SubdefinitionCreateEvent;
-use Alchemy\Phrasea\Core\Event\Record\SubDefinitionCreationFailedEvent;
 use Alchemy\Phrasea\Databox\Subdef\MediaSubdefRepository;
 use Alchemy\WorkerPlugin\Event\StoryCreateCoverEvent;
+use Alchemy\WorkerPlugin\Event\SubdefinitionCreationFailureEvent;
 use Alchemy\WorkerPlugin\Event\SubdefinitionWritemetaEvent;
 use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
@@ -61,20 +61,24 @@ class RecordSubscriber implements EventSubscriberInterface
 
     }
 
-    public function onSubdefinitionCreationFailed(SubDefinitionCreationFailedEvent $event)
+    public function onSubdefinitionCreationFailure(SubdefinitionCreationFailureEvent $event)
     {
         $payload = [
             'message_type' => MessagePublisher::SUBDEF_CREATION_TYPE,
             'payload' => [
                 'recordId'      => $event->getRecord()->getRecordId(),
                 'databoxId'     => $event->getRecord()->getDataboxId(),
-                'subdefName'    => $event->getSubDefinitionName(),
+                'subdefName'    => $event->getSubdefName(),
                 'status'        => ''
             ]
         ];
 
-        $retryCount = 1;
-        $this->messagePublisher->publishMessage($payload, MessagePublisher::RETRY_SUBDEF_QUEUE, $retryCount);
+        $this->messagePublisher->publishMessage(
+            $payload,
+            MessagePublisher::RETRY_SUBDEF_QUEUE,
+            $event->getCount(),
+            $event->getWorkerMessage()
+        );
     }
 
     public function onRecordCreated(RecordEvent $event)
@@ -193,12 +197,12 @@ class RecordSubscriber implements EventSubscriberInterface
     public static function getSubscribedEvents()
     {
         return [
-            RecordEvents::CREATED                           => 'onRecordCreated',
-            RecordEvents::SUBDEFINITION_CREATE              => 'onSubdefinitionCreate',
-            RecordEvents::SUB_DEFINITION_CREATION_FAILED    => 'onSubdefinitionCreationFailed',
-            RecordEvents::METADATA_CHANGED                  => 'onMetadataChanged',
-            WorkerPluginEvents::STORY_CREATE_COVER          => 'onStoryCreateCover',
-            WorkerPluginEvents::SUBDEFINITION_WRITE_META    => 'onSubdefinitionWritemeta'
+            RecordEvents::CREATED                                   => 'onRecordCreated',
+            RecordEvents::SUBDEFINITION_CREATE                      => 'onSubdefinitionCreate',
+            WorkerPluginEvents::SUBDEFINITION_CREATION_FAILURE      => 'onSubdefinitionCreationFailure',
+            RecordEvents::METADATA_CHANGED                          => 'onMetadataChanged',
+            WorkerPluginEvents::STORY_CREATE_COVER                  => 'onStoryCreateCover',
+            WorkerPluginEvents::SUBDEFINITION_WRITE_META            => 'onSubdefinitionWritemeta'
         ];
     }
 

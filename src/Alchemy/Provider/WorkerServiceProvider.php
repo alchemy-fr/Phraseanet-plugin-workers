@@ -61,7 +61,13 @@ class WorkerServiceProvider implements PluginProviderInterface
 
         // register workers
         $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::SUBDEF_CREATION_TYPE, new CallableWorkerFactory(function () use ($app) {
-            return (new SubdefCreationWorker($app['subdef.generator'], $app['alchemy_service.message.publisher'], $app['alchemy_service.logger'], $app['dispatcher']))
+            return (new SubdefCreationWorker(
+                $app['subdef.generator'],
+                $app['alchemy_service.message.publisher'],
+                $app['alchemy_service.logger'],
+                $app['dispatcher'],
+                $app['phraseanet.filesystem']
+            ))
                 ->setApplicationBox($app['phraseanet.appbox']);
         }));
 
