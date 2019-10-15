@@ -27,13 +27,15 @@ class WorkerServiceTest extends \PHPUnit_Framework_TestCase
         $app['alchemy_service.message.publisher'] = $this->prophesize('Alchemy\WorkerPlugin\Queue\MessagePublisher')->reveal();
         $app['alchemy_service.logger'] = $this->prophesize("Monolog\Logger")->reveal();
         $app['dispatcher'] = $this->prophesize('Symfony\Component\EventDispatcher\EventDispatcherInterface')->reveal();
+        $app['phraseanet.filesystem'] = $this->prophesize('Alchemy\Phrasea\Filesystem\FilesystemService')->reveal();
         $writer = $this->prophesize('PHPExiftool\Writer')->reveal();
 
         $subdefCreationWorker = new SubdefCreationWorker(
             $app['subdef.generator'],
             $app['alchemy_service.message.publisher'],
             $app['alchemy_service.logger'],
-            $app['dispatcher']
+            $app['dispatcher'],
+            $app['phraseanet.filesystem']
             );
         $this->assertInstanceOf('Alchemy\\WorkerPlugin\\Worker\\WorkerInterface', $subdefCreationWorker);
 
