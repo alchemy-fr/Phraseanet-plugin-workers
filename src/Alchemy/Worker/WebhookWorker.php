@@ -124,7 +124,22 @@ class WebhookWorker implements WorkerInterface
             ->transferRequests(10)
             ->build();
 
+        /** @var ApiApplication $thirdPartyApplication */
         foreach ($thirdPartyApplications as $thirdPartyApplication) {
+            $creator = $thirdPartyApplication->getCreator();
+
+            if ($creator == null) {
+                continue;
+            }
+
+            $creatorGrantedBaseIds = array_keys($this->app['acl']->get($creator)->get_granted_base());
+
+            $concernedBaseIds = array_intersect($webhookevent->getCollectionBaseIds(), $creatorGrantedBaseIds);
+
+            if (count($webhookevent->getCollectionBaseIds()) != 0 && count($concernedBaseIds) == 0) {
+                continue;
+            }
+
             $delivery = $this->app['manipulator.webhook-delivery']->create($thirdPartyApplication, $webhookevent);
 
             // append delivery id as url anchor
