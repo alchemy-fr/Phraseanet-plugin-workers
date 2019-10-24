@@ -9,9 +9,9 @@ use Alchemy\Phrasea\Core\LazyLocator;
 use Alchemy\Phrasea\Plugin\BasePluginMetadata;
 use Alchemy\Phrasea\Plugin\PluginProviderInterface;
 use Alchemy\Phrasea\Security\Firewall;
-use Alchemy\WorkerPlugin\Configuration\Config;
 use Alchemy\WorkerPlugin\Configuration\ConfigurationTab;
 use Alchemy\WorkerPlugin\Configuration\MetadataTab;
+use Alchemy\WorkerPlugin\Configuration\PullAssetsTab;
 use Alchemy\WorkerPlugin\Configuration\SearchengineTab;
 use Alchemy\WorkerPlugin\Configuration\SubviewTab;
 use Alchemy\WorkerPlugin\Controller\AdminConfigurationController;
@@ -32,10 +32,6 @@ class ControllerServiceProvider extends Api implements PluginProviderInterface
     {
         $app['worker_plugin.name'] = 'phraseanet-plugin-workers';
         $app['worker_plugin.version'] = '1.0.0';
-
-        $app['worker_plugin.config'] = $app->share(function (Application $app) {
-            return Config::getConfiguration();
-        });
 
         // register admin tab
         $this->registerConfigurationTabs($app);
@@ -117,6 +113,7 @@ class ControllerServiceProvider extends Api implements PluginProviderInterface
             'subview'       => 'worker_plugin.configuration_tabs.subview',
             'metadata'      => 'worker_plugin.configuration_tabs.metadata',
             'configuration' => 'worker_plugin.configuration_tabs.configuration',
+            'pullAssets'    => 'worker_plugin.configuration_tabs.pullAssets'
         ];
 
         $app['worker_plugin.configuration_tabs.configuration'] = $app->share(function (PhraseaApplication $app) {
@@ -133,6 +130,10 @@ class ControllerServiceProvider extends Api implements PluginProviderInterface
 
         $app['worker_plugin.configuration_tabs.metadata'] = $app->share(function (PhraseaApplication $app) {
             return new MetadataTab($app['url_generator']);
+        });
+
+        $app['worker_plugin.configuration_tabs.pullAssets'] = $app->share(function (PhraseaApplication $app) {
+            return new PullAssetsTab($app['url_generator']);
         });
     }
 
@@ -189,6 +190,13 @@ class ControllerServiceProvider extends Api implements PluginProviderInterface
                 $firewall->requireAccessToModule('admin');
             })
             ->bind('worker_plugin_admin_populate_status');
+
+        $app->match('/worker-plugin/pull-assets',  'controller.admin.configuration:pullAssetsAction')
+            ->method('GET|POST')
+            ->before(function () use ($firewall) {
+                $firewall->requireAccessToModule('admin');
+            })
+            ->bind('worker_plugin_admin_pullAssets');
     }
 
     /**

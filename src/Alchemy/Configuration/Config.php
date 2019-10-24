@@ -24,7 +24,7 @@ class Config
 
     public static function getConfiguration()
     {
-        $config = null;
+        $config = ['worker_plugin' => []];
         // locate the config for this plugin
         $config_file = self::getConfigFilename();
 
@@ -32,16 +32,18 @@ class Config
             try{
                 $config = Yaml::parse(file_get_contents($config_file));
             }catch(\Exception $e){
-                return null;
+                return ['worker_plugin' => []];
             }
         }
 
-        return $config;
+        return is_null($config) ? ['worker_plugin' => []] : $config;
     }
 
     public static function setConfiguration(array $config)
     {
-        $content = Yaml::dump(['worker_plugin' => $config]);
+        $actualConfig = self::getConfiguration();
+
+        $content = Yaml::dump(['worker_plugin' => array_merge($actualConfig['worker_plugin'], $config)]);
 
         file_put_contents(self::getConfigFilename(), $content);
     }

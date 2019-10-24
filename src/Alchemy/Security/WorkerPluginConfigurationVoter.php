@@ -19,6 +19,7 @@ class WorkerPluginConfigurationVoter extends BaseVoter
                 'Alchemy\WorkerPlugin\Configuration\SearchengineTab',
                 'Alchemy\WorkerPlugin\Configuration\SubviewTab',
                 'Alchemy\WorkerPlugin\Configuration\MetadataTab',
+                'Alchemy\WorkerPlugin\Configuration\PullAssetsTab',
             ]
         );
     }

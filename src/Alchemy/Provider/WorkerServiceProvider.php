@@ -12,6 +12,7 @@ use Alchemy\WorkerPlugin\Worker\ExportMailWorker;
 use Alchemy\WorkerPlugin\Worker\Factory\CallableWorkerFactory;
 use Alchemy\WorkerPlugin\Worker\PopulateIndexWorker;
 use Alchemy\WorkerPlugin\Worker\ProcessPool;
+use Alchemy\WorkerPlugin\Worker\PullAssetsWorker;
 use Alchemy\WorkerPlugin\Worker\Resolver\TypeBasedWorkerResolver;
 use Alchemy\WorkerPlugin\Worker\SubdefCreationWorker;
 use Alchemy\WorkerPlugin\Worker\WebhookWorker;
@@ -106,6 +107,10 @@ class WorkerServiceProvider implements PluginProviderInterface
             return (new PopulateIndexWorker($app['alchemy_service.message.publisher'], $app['elasticsearch.indexer']))
                 ->setApplicationBox($app['phraseanet.appbox'])
                 ->setDispatcher($app['dispatcher']);
+        }));
+
+        $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::PULL_ASSETS_TYPE, new CallableWorkerFactory(function () use ($app) {
+            return new PullAssetsWorker($app['alchemy_service.message.publisher']);
         }));
 
     }

@@ -42,7 +42,7 @@ class MessageHandler
 
                     foreach ($xDeathHeader as $xdeath) {
                         $queue = $xdeath['queue'];
-                        if (!in_array($queue, AMQPConnection::$dafaultQueues)) {
+                        if (!in_array($queue, AMQPConnection::$defaultQueues)) {
                             continue;
                         }
 
@@ -53,14 +53,18 @@ class MessageHandler
             }
 
             // do nothing if message is yet executed more than 3 times
-            if ($count > self::MAX_OF_TRY) {
+            if ($count > self::MAX_OF_TRY && $data['message_type'] !=  MessagePublisher::PULL_ASSETS_TYPE) {
                 $channel->basic_ack($message->delivery_info['delivery_tag']);
             } else {
-
                 try {
                     $workerInvoker->invokeWorker($data['message_type'], json_encode($data['payload']));
 
-                    $channel->basic_ack($message->delivery_info['delivery_tag']);
+                    if ($data['message_type'] ==  MessagePublisher::PULL_ASSETS_TYPE) {
+                        // make a loop for the pull assets
+                        $channel->basic_nack($message->delivery_info['delivery_tag']);
+                    } else {
+                        $channel->basic_ack($message->delivery_info['delivery_tag']);
+                    }
 
                     $oldPayload = $data['payload'];
                     $message = $data['message_type'].' to be consumed! >> Payload ::'. json_encode($oldPayload);
@@ -78,7 +82,7 @@ class MessageHandler
             $prefetchCount = $maxProcesses;
         }
 
-        foreach (AMQPConnection::$dafaultQueues as $queueName) {
+        foreach (AMQPConnection::$defaultQueues as $queueName) {
             if ($argQueueName ) {
                 if (in_array($queueName, $argQueueName)) {
                     $serverConnection->setQueue($queueName);
@@ -95,6 +99,5 @@ class MessageHandler
                 $channel->basic_consume($queueName, Uuid::uuid4(), false, false, false, false, $callback);
             }
         }
-
     }
 }
