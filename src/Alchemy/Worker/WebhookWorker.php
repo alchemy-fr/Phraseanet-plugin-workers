@@ -3,11 +3,14 @@
 namespace Alchemy\WorkerPlugin\Worker;
 
 use Alchemy\Phrasea\Application;
+use Alchemy\Phrasea\Application\Helper\DispatcherAware;
 use Alchemy\Phrasea\Core\Version;
 use Alchemy\Phrasea\Model\Entities\ApiApplication;
 use Alchemy\Phrasea\Model\Entities\WebhookEvent;
 use Alchemy\Phrasea\Model\Entities\WebhookEventDelivery;
 use Alchemy\Phrasea\Webhook\Processor\ProcessorInterface;
+use Alchemy\WorkerPlugin\Event\WebhookDeliverFailureEvent;
+use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use Guzzle\Batch\BatchBuilder;
 use Guzzle\Common\Event;
@@ -20,6 +23,8 @@ use Guzzle\Plugin\Backoff\TruncatedBackoffStrategy;
 
 class WebhookWorker implements WorkerInterface
 {
+    use DispatcherAware;
+
     private $app;
 
     /** @var MessagePublisher  $messagePublisher */
@@ -37,6 +42,7 @@ class WebhookWorker implements WorkerInterface
     public function process(array $payload)
     {
         if (isset($payload['id'])) {
+            $webhookEventId = $payload['id'];
             $app = $this->app;
 
             $httpClient = new GuzzleClient();
@@ -50,7 +56,7 @@ class WebhookWorker implements WorkerInterface
             }, -254);
 
             // Set callback which logs success or failure
-            $subscriber = new CallbackBackoffStrategy(function ($retries, Request $request, $response, $e) use ($app) {
+            $subscriber = new CallbackBackoffStrategy(function ($retries, Request $request, $response, $e) use ($app, $webhookEventId, $payload) {
                 $retry = true;
                 if ($response && (null !== $deliverId = parse_url($request->getUrl(), PHP_URL_FRAGMENT))) {
                     /** @var WebhookEventDelivery $delivery */
@@ -71,11 +77,22 @@ class WebhookWorker implements WorkerInterface
                     } else {
                         $app['manipulator.webhook-delivery']->deliveryFailure($delivery);
 
+                        $uniqueUrl = sprintf('%s#%s', $delivery->getThirdPartyApplication()->getWebhookUrl(), $deliverId);
+
                         $logType = 'error';
                         $logEntry = sprintf('Deliver failure event "%d:%s" for app "%s"',
                             $delivery->getWebhookEvent()->getId(), $delivery->getWebhookEvent()->getName(),
                             $delivery->getThirdPartyApplication()->getName()
                         );
+
+                        $count = isset($payload['count']) ? $payload['count'] + 1 : 2 ;
+
+                        $this->dispatch(WorkerPluginEvents::WEBHOOK_DELIVER_FAILURE, new WebhookDeliverFailureEvent(
+                            $webhookEventId,
+                            $logEntry,
+                            $count,
+                            $uniqueUrl
+                        ));
                     }
 
                     $app['alchemy_service.message.publisher']->pushLog($logEntry, $logType, $logContext);
@@ -85,7 +102,7 @@ class WebhookWorker implements WorkerInterface
             }, true, new CurlBackoffStrategy());
 
             // set max retries
-            $subscriber = new TruncatedBackoffStrategy(WebhookEventDelivery::MAX_DELIVERY_TRIES, $subscriber);
+            $subscriber = new TruncatedBackoffStrategy(1, $subscriber);
             $subscriber = new BackoffPlugin($subscriber);
 
             $httpClient->addSubscriber($subscriber);
@@ -94,22 +111,26 @@ class WebhookWorker implements WorkerInterface
             $thirdPartyApplications = $this->app['repo.api-applications']->findWithDefinedWebhookCallback();
 
             /** @var WebhookEvent|null $webhookevent */
-            $webhookevent = $this->app['repo.webhook-event']->find($payload['id']);
+            $webhookevent = $this->app['repo.webhook-event']->find($webhookEventId);
 
             if ($webhookevent !== null) {
                 $app['manipulator.webhook-event']->processed($webhookevent);
 
                 $this->messagePublisher->pushLog(sprintf('Processing event "%s" with id %d', $webhookevent->getName(), $webhookevent->getId()));
                 // send requests
-                $this->deliverEvent($httpClient, $thirdPartyApplications, $webhookevent);
+                $this->deliverEvent($httpClient, $thirdPartyApplications, $webhookevent, $payload);
             }
         }
     }
 
-    private function deliverEvent(GuzzleClient $httpClient, array $thirdPartyApplications, WebhookEvent $webhookevent)
+    private function deliverEvent(GuzzleClient $httpClient, array $thirdPartyApplications, WebhookEvent $webhookevent, $payload)
     {
         if (count($thirdPartyApplications) === 0) {
-            $this->messagePublisher->pushLog(sprintf('No applications defined to listen for webhook events'));
+            $workerMessage = 'No applications defined to listen for webhook events';
+            $this->messagePublisher->pushLog($workerMessage);
+
+            // count = 0  mean do not retry because no api application defined
+            $this->dispatch(WorkerPluginEvents::WEBHOOK_DELIVER_FAILURE, new WebhookDeliverFailureEvent($webhookevent->getId(), $workerMessage, 0));
 
             return;
         }
@@ -140,10 +161,22 @@ class WebhookWorker implements WorkerInterface
                 continue;
             }
 
-            $delivery = $this->app['manipulator.webhook-delivery']->create($thirdPartyApplication, $webhookevent);
+            if (isset($payload['uniqueUrl'])) {
+                $deliverId = parse_url($payload['uniqueUrl'], PHP_URL_FRAGMENT);
+                /** @var WebhookEventDelivery $delivery */
+                $delivery = $this->app['repo.webhook-delivery']->find($deliverId);
 
-            // append delivery id as url anchor
-            $uniqueUrl = $this->getUrl($thirdPartyApplication, $delivery);
+                // $payload['uniqueUrl']  only the url to retry
+                if ($this->getUrl($thirdPartyApplication, $delivery) != $payload['uniqueUrl']) {
+                    continue;
+                }
+                $uniqueUrl = $payload['uniqueUrl'];
+            } else {
+                $delivery = $this->app['manipulator.webhook-delivery']->create($thirdPartyApplication, $webhookevent);
+
+                // append delivery id as url anchor
+                $uniqueUrl = $this->getUrl($thirdPartyApplication, $delivery);
+            }
 
             // create http request with data as request body
             $batch->add($httpClient->createRequest('POST', $uniqueUrl, [
@@ -151,7 +184,11 @@ class WebhookWorker implements WorkerInterface
             ], json_encode($data)));
         }
 
-        $batch->flush();
+        try {
+            $batch->flush();
+        } catch (\Exception $e) {
+            $this->messagePublisher->pushLog($e->getMessage());
+        }
     }
 
     private function getUrl(ApiApplication $application, WebhookEventDelivery $delivery)

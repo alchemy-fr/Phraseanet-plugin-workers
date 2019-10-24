@@ -16,7 +16,6 @@ use Alchemy\WorkerPlugin\Worker\Resolver\TypeBasedWorkerResolver;
 use Alchemy\WorkerPlugin\Worker\SubdefCreationWorker;
 use Alchemy\WorkerPlugin\Worker\WebhookWorker;
 use Alchemy\WorkerPlugin\Worker\WorkerInvoker;
-use Alchemy\WorkerPlugin\Worker\WriteLogsWorker;
 use Alchemy\WorkerPlugin\Worker\WriteMetadatasWorker;
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Logger;
@@ -62,7 +61,13 @@ class WorkerServiceProvider implements PluginProviderInterface
 
         // register workers
         $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::SUBDEF_CREATION_TYPE, new CallableWorkerFactory(function () use ($app) {
-            return (new SubdefCreationWorker($app['subdef.generator'], $app['alchemy_service.message.publisher'], $app['alchemy_service.logger'], $app['dispatcher']))
+            return (new SubdefCreationWorker(
+                $app['subdef.generator'],
+                $app['alchemy_service.message.publisher'],
+                $app['alchemy_service.logger'],
+                $app['dispatcher'],
+                $app['phraseanet.filesystem']
+            ))
                 ->setApplicationBox($app['phraseanet.appbox']);
         }));
 
@@ -77,17 +82,14 @@ class WorkerServiceProvider implements PluginProviderInterface
                 ->setDelivererLocator(new LazyLocator($app, 'notification.deliverer'));
         }));
 
-        $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::WRITE_LOGS_TYPE, new CallableWorkerFactory(function () use ($app) {
-            return new WriteLogsWorker($app['alchemy_service.logger']);
-        }));
-
         $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::ASSETS_INGEST_TYPE, new CallableWorkerFactory(function () use ($app) {
             return (new AssetsIngestWorker($app))
                 ->setEntityManagerLocator(new LazyLocator($app, 'orm.em'));
         }));
 
         $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::WEBHOOK_TYPE, new CallableWorkerFactory(function () use ($app) {
-            return new WebhookWorker($app);
+            return (new WebhookWorker($app))
+                ->setDispatcher($app['dispatcher']);
         }));
 
         $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::CREATE_RECORD_TYPE, new CallableWorkerFactory(function () use ($app) {
@@ -102,7 +104,8 @@ class WorkerServiceProvider implements PluginProviderInterface
 
         $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::POPULATE_INDEX_TYPE, new CallableWorkerFactory(function () use ($app) {
             return (new PopulateIndexWorker($app['alchemy_service.message.publisher'], $app['elasticsearch.indexer']))
-                ->setApplicationBox($app['phraseanet.appbox']);
+                ->setApplicationBox($app['phraseanet.appbox'])
+                ->setDispatcher($app['dispatcher']);
         }));
 
     }
@@ -121,6 +124,5 @@ class WorkerServiceProvider implements PluginProviderInterface
     {
         return new static();
     }
-
 
 }

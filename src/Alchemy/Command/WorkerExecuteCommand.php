@@ -3,6 +3,7 @@
 namespace Alchemy\WorkerPlugin\Command;
 
 use Alchemy\Phrasea\Command\Command;
+use Alchemy\WorkerPlugin\Queue\AMQPConnection;
 use Alchemy\WorkerPlugin\Queue\MessageHandler;
 use Alchemy\WorkerPlugin\Worker\WorkerInvoker;
 use PhpAmqpLib\Channel\AMQPChannel;
@@ -38,6 +39,7 @@ class WorkerExecuteCommand extends Command
         $argQueueName = $input->getOption('queue-name');
         $maxProcesses = intval($input->getOption('max-processes'));
 
+        /** @var AMQPConnection $serverConnection */
         $serverConnection = $this->container['alchemy_service.amqp.connection'];
 
         /** @var AMQPChannel $channel */
@@ -68,7 +70,7 @@ class WorkerExecuteCommand extends Command
 
         /** @var MessageHandler $messageHandler */
         $messageHandler = $this->container['alchemy_service.message.handler'];
-        $messageHandler->consume($channel, $workerInvoker, $argQueueName, $maxProcesses);
+        $messageHandler->consume($serverConnection, $workerInvoker, $argQueueName, $maxProcesses);
 
         while (count($channel->callbacks)) {
             $output->writeln("[*] Waiting for messages. To exit press CTRL+C");

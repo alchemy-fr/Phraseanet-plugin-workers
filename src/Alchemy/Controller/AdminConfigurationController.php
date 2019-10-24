@@ -11,6 +11,7 @@ use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
 use Alchemy\WorkerPlugin\Form\WorkerPluginConfigurationType;
 use Alchemy\WorkerPlugin\Form\WorkerPluginSearchengineType;
 use Alchemy\WorkerPlugin\Model\DBManipulator;
+use Alchemy\WorkerPlugin\Queue\AMQPConnection;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -31,7 +32,21 @@ class AdminConfigurationController extends Controller
         $form->handleRequest($request);
 
         if ($form->isValid()) {
-            Config::setConfiguration($form->getData());
+            // only changed value in the form
+            $config = isset($config['worker_plugin']) ? $config['worker_plugin'] : [];
+            $newTtlChanged = array_diff_assoc($form->getData(), $config);
+
+            if ($newTtlChanged) {
+                Config::setConfiguration($form->getData());
+
+                $queues = array_intersect_key(AMQPConnection::$dafaultQueues, $newTtlChanged);
+                $retryQueuesToReset = array_intersect_key(AMQPConnection::$dafaultRetryQueues, array_flip($queues));
+
+                /** @var AMQPConnection $serverConnection */
+                $serverConnection = $this->app['alchemy_service.amqp.connection'];
+
+                $serverConnection->reinitializeQueue($retryQueuesToReset);
+            }
 
             return $app->redirectPath('admin_plugins_list');
         }

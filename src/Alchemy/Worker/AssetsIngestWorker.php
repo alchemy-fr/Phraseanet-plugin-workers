@@ -6,7 +6,8 @@ use Alchemy\Phrasea\Application\Helper\EntityManagerAware;
 use Alchemy\Phrasea\Application as PhraseaApplication;
 use Alchemy\Phrasea\Model\Entities\StoryWZ;
 use Alchemy\Phrasea\Model\Repositories\UserRepository;
-use Alchemy\WorkerPlugin\Configuration\Config;
+use Alchemy\WorkerPlugin\Event\AssetsCreationFailureEvent;
+use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
 use Alchemy\WorkerPlugin\Model\DBManipulator;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use GuzzleHttp\Client;
@@ -35,11 +36,23 @@ class AssetsIngestWorker implements WorkerInterface
         $uploaderClient = new Client(['base_uri' => $payload['base_url']]);
 
         //get first asset informations to check if it's a story
-        $body = $uploaderClient->get('/assets/'.$assets[0], [
-            'headers' => [
-                'Authorization' => 'AssetToken '.$payload['token']
-            ]
-        ])->getBody()->getContents();
+        try {
+            $body = $uploaderClient->get('/assets/'.$assets[0], [
+                'headers' => [
+                    'Authorization' => 'AssetToken '.$payload['token']
+                ]
+            ])->getBody()->getContents();
+        } catch(\Exception $e) {
+            $count = isset($payload['count']) ? $payload['count'] + 1 : 2 ;
+
+            $this->app['dispatcher']->dispatch(WorkerPluginEvents::ASSETS_CREATION_FAILURE, new AssetsCreationFailureEvent(
+                $payload,
+                'Error when getting assets information !' . $e->getMessage(),
+                $count
+            ));
+
+            return;
+        }
 
         $body = json_decode($body,true);
 

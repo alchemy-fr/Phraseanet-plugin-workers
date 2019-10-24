@@ -2,14 +2,15 @@
 
 namespace Alchemy\WorkerPlugin\Queue;
 
+use Alchemy\WorkerPlugin\Configuration\Config;
 use Monolog\Logger;
 use PhpAmqpLib\Message\AMQPMessage;
+use PhpAmqpLib\Wire\AMQPTable;
 use Psr\Log\LoggerInterface;
 
 class MessagePublisher
 {
     const EXPORT_MAIL_TYPE     = 'exportMail';
-    const WRITE_LOGS_TYPE      = 'writeLogs';
     const SUBDEF_CREATION_TYPE = 'subdefCreation';
     const WRITE_METADATAS_TYPE = 'writeMetadatas';
     const ASSETS_INGEST_TYPE   = 'assetsIngest';
@@ -21,7 +22,6 @@ class MessagePublisher
     const EXPORT_QUEUE         = 'export-queue';
     const SUBDEF_QUEUE         = 'subdef-queue';
     const METADATAS_QUEUE      = 'metadatas-queue';
-    const LOGS_QUEUE           = 'logs-queue';
     const WEBHOOK_QUEUE        = 'webhook-queue';
     const ASSETS_INGEST_QUEUE  = 'ingest-queue';
     const CREATE_RECORD_QUEUE  = 'createrecord-queue';
@@ -52,13 +52,34 @@ class MessagePublisher
         $this->logger           = $logger;
     }
 
-    public function publishMessage(array $payload, $queueName)
+    public function publishMessage(array $payload, $queueName, $retryCount = null, $workerMessage = '')
     {
         $msg = new AMQPMessage(json_encode($payload));
+        $routing = array_search($queueName, AMQPConnection::$dafaultRetryQueues);
+
+        if (count($retryCount) && $routing != false) {
+            // ad a message header information
+            $headers = new AMQPTable([
+                'x-death' => [
+                    [
+                        'count'         => $retryCount,
+                        'exchange'      => AMQPConnection::ALCHEMY_EXCHANGE,
+                        'queue'         => $routing,
+                        'routing-keys'  => $routing,
+                        'reason'        => 'rejected',   // rejected is sended like nack
+                        'time'          => new \DateTime('now', new \DateTimeZone('UTC'))
+                    ]
+                ],
+                'worker-message' => $workerMessage
+            ]);
+
+            $msg->set('application_headers', $headers);
+        }
 
         $channel = $this->serverConnection->setQueue($queueName);
 
-        $channel->basic_publish($msg, AMQPConnection::ALCHEMY_EXCHANGE, $queueName);
+        $exchange = in_array($queueName, AMQPConnection::$dafaultQueues) ? AMQPConnection::ALCHEMY_EXCHANGE : AMQPConnection::RETRY_ALCHEMY_EXCHANGE;
+        $channel->basic_publish($msg, $exchange, $queueName);
 
         return true;
     }
@@ -75,10 +96,6 @@ class MessagePublisher
      */
     public function pushLog($message, $method = 'info', $context = [])
     {
-//        $data['message_type'] = self::LOGS_TYPE;
-//        $data['payload']['message'] = $message;
-//        $this->publishMessage($data, self::LOGS_QUEUE);
-
         // write logs directly in file
 
         call_user_func(array($this->logger, $method), $message, $context);

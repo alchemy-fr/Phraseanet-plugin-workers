@@ -4,8 +4,10 @@ namespace Alchemy\WorkerPlugin\Worker;
 
 use Alchemy\Phrasea\Application\Helper\ApplicationBoxAware;
 use Alchemy\Phrasea\Core\PhraseaTokens;
+use Alchemy\Phrasea\Filesystem\FilesystemService;
 use Alchemy\Phrasea\Media\SubdefGenerator;
 use Alchemy\WorkerPlugin\Event\StoryCreateCoverEvent;
+use Alchemy\WorkerPlugin\Event\SubdefinitionCreationFailureEvent;
 use Alchemy\WorkerPlugin\Event\SubdefinitionWritemetaEvent;
 use Alchemy\WorkerPlugin\Event\WorkerPluginEvents;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
@@ -23,18 +25,21 @@ class SubdefCreationWorker implements WorkerInterface
 
     private $logger;
     private $dispatcher;
+    private $filesystem;
 
     public function __construct(
         SubdefGenerator $subdefGenerator,
         MessagePublisher $messagePublisher,
         LoggerInterface $logger,
-        EventDispatcherInterface $dispatcher
+        EventDispatcherInterface $dispatcher,
+        FilesystemService $filesystem
     )
     {
         $this->subdefGenerator  = $subdefGenerator;
         $this->messagePublisher = $messagePublisher;
         $this->logger           = $logger;
         $this->dispatcher       = $dispatcher;
+        $this->filesystem       = $filesystem;
     }
 
     public function process(array $payload)
@@ -52,6 +57,33 @@ class SubdefCreationWorker implements WorkerInterface
                 $this->subdefGenerator->setLogger($this->logger);
 
                 $this->subdefGenerator->generateSubdefs($record, $wantedSubdef);
+
+                // begin to check if the subdef is successfully generated
+                $subdef = $record->getDatabox()->get_subdef_structure()->getSubdefGroup($record->getType())->getSubdef($payload['subdefName']);
+                $filePathToCheck = null;
+
+                if ($record->has_subdef($payload['subdefName']) ) {
+                    $filePathToCheck = $record->get_subdef($payload['subdefName'])->getRealPath();
+                }
+
+                $filePathToCheck = $this->filesystem->generateSubdefPathname($record, $subdef, $filePathToCheck);
+
+                if (!$this->filesystem->exists($filePathToCheck)) {
+
+                    $count = isset($payload['count']) ? $payload['count'] + 1 : 2 ;
+
+                    $this->dispatcher->dispatch(WorkerPluginEvents::SUBDEFINITION_CREATION_FAILURE, new SubdefinitionCreationFailureEvent(
+                        $record,
+                        $payload['subdefName'],
+                        'Subdef generation failed !',
+                        $count
+                    ));
+
+                    $this->subdefGenerator->setLogger($oldLogger);
+                    return ;
+                }
+                // checking ended
+
                 // order to write meta for the subdef if needed
                 $this->dispatcher->dispatch(WorkerPluginEvents::SUBDEFINITION_WRITE_META, new SubdefinitionWritemetaEvent($record, $payload['subdefName']));
 
