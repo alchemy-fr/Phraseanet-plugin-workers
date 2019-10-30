@@ -125,6 +125,13 @@ class RecordSubscriber implements EventSubscriberInterface
                         ]
                     ];
 
+                    $logMessage = sprintf("Subdef %s is not physically present! to be passed in the %s !  payload  >>> %s",
+                        $subdef->get_name(),
+                        MessagePublisher::RETRY_METADATAS_QUEUE,
+                            json_encode($payload)
+                    );
+                    $this->messagePublisher->pushLog($logMessage);
+
                     $this->messagePublisher->publishMessage(
                         $payload,
                         MessagePublisher::RETRY_METADATAS_QUEUE,
@@ -159,6 +166,14 @@ class RecordSubscriber implements EventSubscriberInterface
                     'subdefName'    => $event->getSubdefName()
                 ]
             ];
+
+            $logMessage = sprintf("Subdef %s write meta failed, error : %s ! to be passed in the %s !  payload  >>> %s",
+                $event->getSubdefName(),
+                $event->getWorkerMessage(),
+                MessagePublisher::RETRY_METADATAS_QUEUE,
+                json_encode($payload)
+            );
+            $this->messagePublisher->pushLog($logMessage);
 
             $this->messagePublisher->publishMessage(
                 $payload,
