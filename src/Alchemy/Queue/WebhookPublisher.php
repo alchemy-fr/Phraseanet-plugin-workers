@@ -20,8 +20,7 @@ class WebhookPublisher implements WebhookPublisherInterface
         $payload = [
             'message_type' => MessagePublisher::WEBHOOK_TYPE,
             'payload' => [
-                'id'    => $event->getId(),
-                'time'  => time()
+                'id'    => $event->getId()
             ]
         ];
 

@@ -20,6 +20,7 @@ use Guzzle\Plugin\Backoff\BackoffPlugin;
 use Guzzle\Plugin\Backoff\CallbackBackoffStrategy;
 use Guzzle\Plugin\Backoff\CurlBackoffStrategy;
 use Guzzle\Plugin\Backoff\TruncatedBackoffStrategy;
+use PhpAmqpLib\Wire\AMQPTable;
 
 class WebhookWorker implements WorkerInterface
 {
@@ -77,8 +78,6 @@ class WebhookWorker implements WorkerInterface
                     } else {
                         $app['manipulator.webhook-delivery']->deliveryFailure($delivery);
 
-                        $uniqueUrl = sprintf('%s#%s', $delivery->getThirdPartyApplication()->getWebhookUrl(), $deliverId);
-
                         $logType = 'error';
                         $logEntry = sprintf('Deliver failure event "%d:%s" for app "%s"',
                             $delivery->getWebhookEvent()->getId(), $delivery->getWebhookEvent()->getName(),
@@ -91,7 +90,7 @@ class WebhookWorker implements WorkerInterface
                             $webhookEventId,
                             $logEntry,
                             $count,
-                            $uniqueUrl
+                            $deliverId
                         ));
                     }
 
@@ -136,6 +135,15 @@ class WebhookWorker implements WorkerInterface
         }
 
         // format event data
+        $webhookData = $webhookevent->getData();
+        if (isset($payload['delivery_id'])) {
+            $webhookData['retry_at'] = new \DateTime('now', new \DateTimeZone('UTC'));
+        } else {
+            $webhookData['to_deliver_at'] = new \DateTime('now', new \DateTimeZone('UTC'));
+        }
+
+        $webhookevent->setData($webhookData);
+
         /** @var ProcessorInterface $eventProcessor */
         $eventProcessor = $this->app['webhook.processor_factory']->get($webhookevent);
         $data = $eventProcessor->process($webhookevent);
@@ -161,22 +169,20 @@ class WebhookWorker implements WorkerInterface
                 continue;
             }
 
-            if (isset($payload['uniqueUrl'])) {
-                $deliverId = parse_url($payload['uniqueUrl'], PHP_URL_FRAGMENT);
+            if (isset($payload['delivery_id']) && $payload['delivery_id'] != null) {
                 /** @var WebhookEventDelivery $delivery */
-                $delivery = $this->app['repo.webhook-delivery']->find($deliverId);
+                $delivery = $this->app['repo.webhook-delivery']->find($payload['delivery_id']);
 
-                // $payload['uniqueUrl']  only the url to retry
-                if ($this->getUrl($thirdPartyApplication, $delivery) != $payload['uniqueUrl']) {
+                //  only the app url to retry
+                if ($delivery->getThirdPartyApplication()->getId() != $thirdPartyApplication->getId()) {
                     continue;
                 }
-                $uniqueUrl = $payload['uniqueUrl'];
             } else {
                 $delivery = $this->app['manipulator.webhook-delivery']->create($thirdPartyApplication, $webhookevent);
-
-                // append delivery id as url anchor
-                $uniqueUrl = $this->getUrl($thirdPartyApplication, $delivery);
             }
+
+            // append delivery id as url anchor
+            $uniqueUrl = $this->getUrl($thirdPartyApplication, $delivery);
 
             // create http request with data as request body
             $batch->add($httpClient->createRequest('POST', $uniqueUrl, [
@@ -188,6 +194,11 @@ class WebhookWorker implements WorkerInterface
             $batch->flush();
         } catch (\Exception $e) {
             $this->messagePublisher->pushLog($e->getMessage());
+            $this->messagePublisher->publishFailedMessage(
+                $payload,
+                new AMQPTable(['worker-message' => $e->getMessage()]),
+                MessagePublisher::FAILED_WEBHOOK_QUEUE
+            );
         }
     }
 
