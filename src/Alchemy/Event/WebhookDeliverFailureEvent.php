@@ -9,14 +9,14 @@ class WebhookDeliverFailureEvent extends SfEvent
     private $webhookEventId;
     private $workerMessage;
     private $count;
-    private $deleveryId;
+    private $uniqueUrl;
 
-    public function __construct($webhookEventId, $workerMessage, $count = 2, $deleveryId = null)
+    public function __construct($webhookEventId, $workerMessage, $count = 2, $uniqueUrl = '')
     {
         $this->webhookEventId   = $webhookEventId;
         $this->workerMessage    = $workerMessage;
         $this->count            = $count;
-        $this->deleveryId       = $deleveryId;
+        $this->uniqueUrl        = $uniqueUrl;
     }
 
     public function getWebhookEventId()
@@ -34,8 +34,8 @@ class WebhookDeliverFailureEvent extends SfEvent
         return $this->count;
     }
 
-    public function getDeleveryId()
+    public function getUniqueUrl()
     {
-        return $this->deleveryId;
+        return $this->uniqueUrl;
     }
 }

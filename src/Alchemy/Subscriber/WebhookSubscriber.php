@@ -24,8 +24,8 @@ class WebhookSubscriber implements EventSubscriberInterface
             $payload = [
                 'message_type' => MessagePublisher::WEBHOOK_TYPE,
                 'payload' => [
-                    'id'            => $event->getWebhookEventId(),
-                    'delivery_id'   => $event->getDeleveryId(),
+                    'id'        => $event->getWebhookEventId(),
+                    'uniqueUrl' => $event->getUniqueUrl(),
                 ]
             ];
 
