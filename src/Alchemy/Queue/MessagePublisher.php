@@ -37,6 +37,16 @@ class MessagePublisher
     const RETRY_CREATE_RECORD_QUEUE  = 'retry-createrecord-queue';
     const RETRY_POPULATE_INDEX_QUEUE = 'retry-populateindex-queue';
 
+    // all failed queue, if message is treated over 3 times it goes to the failed queue
+    const FAILED_EXPORT_QUEUE         = 'failed-export-queue';
+    const FAILED_SUBDEF_QUEUE         = 'failed-subdef-queue';
+    const FAILED_METADATAS_QUEUE      = 'failed-metadatas-queue';
+    const FAILED_WEBHOOK_QUEUE        = 'failed-webhook-queue';
+    const FAILED_ASSETS_INGEST_QUEUE  = 'failed-ingest-queue';
+    const FAILED_CREATE_RECORD_QUEUE  = 'failed-createrecord-queue';
+    const FAILED_POPULATE_INDEX_QUEUE = 'failed-populateindex-queue';
+
+
     const NEW_RECORD_MESSAGE   = 'newrecord';
 
 
@@ -55,7 +65,7 @@ class MessagePublisher
     public function publishMessage(array $payload, $queueName, $retryCount = null, $workerMessage = '')
     {
         $msg = new AMQPMessage(json_encode($payload));
-        $routing = array_search($queueName, AMQPConnection::$dafaultRetryQueues);
+        $routing = array_search($queueName, AMQPConnection::$defaultRetryQueues);
 
         if (count($retryCount) && $routing != false) {
             // ad a message header information
@@ -78,7 +88,7 @@ class MessagePublisher
 
         $channel = $this->serverConnection->setQueue($queueName);
 
-        $exchange = in_array($queueName, AMQPConnection::$dafaultQueues) ? AMQPConnection::ALCHEMY_EXCHANGE : AMQPConnection::RETRY_ALCHEMY_EXCHANGE;
+        $exchange = in_array($queueName, AMQPConnection::$defaultQueues) ? AMQPConnection::ALCHEMY_EXCHANGE : AMQPConnection::RETRY_ALCHEMY_EXCHANGE;
         $channel->basic_publish($msg, $exchange, $queueName);
 
         return true;
@@ -99,5 +109,14 @@ class MessagePublisher
         // write logs directly in file
 
         call_user_func(array($this->logger, $method), $message, $context);
+    }
+
+    public function publishFailedMessage(array $payload, AMQPTable $headers, $queueName)
+    {
+        $msg = new AMQPMessage(json_encode($payload));
+        $msg->set('application_headers', $headers);
+
+        $channel = $this->serverConnection->setQueue($queueName);
+        $channel->basic_publish($msg, AMQPConnection::RETRY_ALCHEMY_EXCHANGE, $queueName);
     }
 }

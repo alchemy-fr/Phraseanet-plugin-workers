@@ -42,7 +42,7 @@ class MessageHandler
 
                     foreach ($xDeathHeader as $xdeath) {
                         $queue = $xdeath['queue'];
-                        if (!in_array($queue, AMQPConnection::$dafaultQueues)) {
+                        if (!in_array($queue, AMQPConnection::$defaultQueues)) {
                             continue;
                         }
 
@@ -52,8 +52,16 @@ class MessageHandler
                 }
             }
 
-            // do nothing if message is yet executed more than 3 times
+            // if message is yet executed 3 times, save the unprocessed message in the corresponding failed queues
             if ($count > self::MAX_OF_TRY) {
+                $this->messagePublisher->publishFailedMessage($data['payload'], $headers, AMQPConnection::$defaultFailedQueues[$data['message_type']]);
+
+                $logMessage = sprintf("Rabbit message executed 3 times, it's to be saved in %s , payload >>> %s",
+                    AMQPConnection::$defaultFailedQueues[$data['message_type']],
+                    json_encode($data['payload'])
+                );
+                $this->messagePublisher->pushLog($logMessage);
+
                 $channel->basic_ack($message->delivery_info['delivery_tag']);
             } else {
 
@@ -78,7 +86,7 @@ class MessageHandler
             $prefetchCount = $maxProcesses;
         }
 
-        foreach (AMQPConnection::$dafaultQueues as $queueName) {
+        foreach (AMQPConnection::$defaultQueues as $queueName) {
             if ($argQueueName ) {
                 if (in_array($queueName, $argQueueName)) {
                     $serverConnection->setQueue($queueName);

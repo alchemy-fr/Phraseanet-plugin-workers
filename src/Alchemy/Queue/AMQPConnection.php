@@ -19,7 +19,7 @@ class AMQPConnection
 
     private $hostConfig;
 
-    public static $dafaultQueues = [
+    public static $defaultQueues = [
         MessagePublisher::WRITE_METADATAS_TYPE  => MessagePublisher::METADATAS_QUEUE,
         MessagePublisher::SUBDEF_CREATION_TYPE  => MessagePublisher::SUBDEF_QUEUE,
         MessagePublisher::EXPORT_MAIL_TYPE      => MessagePublisher::EXPORT_QUEUE,
@@ -30,7 +30,7 @@ class AMQPConnection
     ];
 
     //  the corresponding worker queues and retry queues
-    public static $dafaultRetryQueues = [
+    public static $defaultRetryQueues = [
         MessagePublisher::METADATAS_QUEUE       => MessagePublisher::RETRY_METADATAS_QUEUE,
         MessagePublisher::SUBDEF_QUEUE          => MessagePublisher::RETRY_SUBDEF_QUEUE,
         MessagePublisher::EXPORT_QUEUE          => MessagePublisher::RETRY_EXPORT_QUEUE,
@@ -40,7 +40,17 @@ class AMQPConnection
         MessagePublisher::POPULATE_INDEX_QUEUE  => MessagePublisher::RETRY_POPULATE_INDEX_QUEUE
     ];
 
-    // message TTL in retry queue in millisecond
+    public static $defaultFailedQueues = [
+        MessagePublisher::WRITE_METADATAS_TYPE  => MessagePublisher::FAILED_METADATAS_QUEUE,
+        MessagePublisher::SUBDEF_CREATION_TYPE  => MessagePublisher::FAILED_SUBDEF_QUEUE,
+        MessagePublisher::EXPORT_MAIL_TYPE      => MessagePublisher::FAILED_EXPORT_QUEUE,
+        MessagePublisher::WEBHOOK_TYPE          => MessagePublisher::FAILED_WEBHOOK_QUEUE,
+        MessagePublisher::ASSETS_INGEST_TYPE    => MessagePublisher::FAILED_ASSETS_INGEST_QUEUE,
+        MessagePublisher::CREATE_RECORD_TYPE    => MessagePublisher::FAILED_CREATE_RECORD_QUEUE,
+        MessagePublisher::POPULATE_INDEX_TYPE   => MessagePublisher::FAILED_POPULATE_INDEX_QUEUE
+    ];
+
+    // default message TTL in retry queue in millisecond
     const RETRY_DELAY =  10000;
 
     public function __construct(array $serverConfiguration)
@@ -91,34 +101,39 @@ class AMQPConnection
             $this->declareExchange();
         }
 
-        if (isset(self::$dafaultRetryQueues[$queueName])) {
+        if (isset(self::$defaultRetryQueues[$queueName])) {
             $this->channel->queue_declare($queueName, false, true, false, false, false, new AMQPTable([
                 'x-dead-letter-exchange'    => self::RETRY_ALCHEMY_EXCHANGE,            // the exchange to which republish a 'dead' message
-                'x-dead-letter-routing-key' => self::$dafaultRetryQueues[$queueName]    // the routing key to apply to this 'dead' message
+                'x-dead-letter-routing-key' => self::$defaultRetryQueues[$queueName]    // the routing key to apply to this 'dead' message
             ]));
 
             $this->channel->queue_bind($queueName, self::ALCHEMY_EXCHANGE, $queueName);
 
             // declare also the corresponding retry queue
             // use this to delay the delivery of a message to the alchemy-exchange
-            $this->channel->queue_declare(self::$dafaultRetryQueues[$queueName], false, true, false, false, false, new AMQPTable([
+            $this->channel->queue_declare(self::$defaultRetryQueues[$queueName], false, true, false, false, false, new AMQPTable([
                 //  uncomment this when we want to treat non-ack message
                 'x-dead-letter-exchange'    => AMQPConnection::ALCHEMY_EXCHANGE,
                 'x-dead-letter-routing-key' => $queueName,
                 'x-message-ttl'             => $this->getTtlPerRouting($queueName)
             ]));
 
-            $this->channel->queue_bind(self::$dafaultRetryQueues[$queueName], AMQPConnection::RETRY_ALCHEMY_EXCHANGE, self::$dafaultRetryQueues[$queueName]);
+            $this->channel->queue_bind(self::$defaultRetryQueues[$queueName], AMQPConnection::RETRY_ALCHEMY_EXCHANGE, self::$defaultRetryQueues[$queueName]);
 
-        } elseif (in_array($queueName, self::$dafaultRetryQueues)) {
+        } elseif (in_array($queueName, self::$defaultRetryQueues)) {
             // if it's a retry queue
-            $routing = array_search($queueName, AMQPConnection::$dafaultRetryQueues);
+            $routing = array_search($queueName, AMQPConnection::$defaultRetryQueues);
             $this->channel->queue_declare($queueName, false, true, false, false, false, new AMQPTable([
                 //  uncomment this when we want to treat non-ack message
                 'x-dead-letter-exchange'    => AMQPConnection::ALCHEMY_EXCHANGE,
                 'x-dead-letter-routing-key' => $routing,
                 'x-message-ttl'             => $this->getTtlPerRouting($routing)
             ]));
+
+            $this->channel->queue_bind($queueName, AMQPConnection::RETRY_ALCHEMY_EXCHANGE, $queueName);
+        } elseif (in_array($queueName, self::$defaultFailedQueues)) {
+            // if it's a failed queue
+            $this->channel->queue_declare($queueName, false, true, false, false, false);
 
             $this->channel->queue_bind($queueName, AMQPConnection::RETRY_ALCHEMY_EXCHANGE, $queueName);
         }
@@ -149,7 +164,7 @@ class AMQPConnection
         $config = Config::getConfiguration();
         $config = $config['worker_plugin'];
 
-        $messageTtl = isset($config[array_search($routing, AMQPConnection::$dafaultQueues)]) ? $config[array_search($routing, AMQPConnection::$dafaultQueues)] : self::RETRY_DELAY;
+        $messageTtl = isset($config[array_search($routing, AMQPConnection::$defaultQueues)]) ? $config[array_search($routing, AMQPConnection::$defaultQueues)] : self::RETRY_DELAY;
 
         return intval($messageTtl);
     }

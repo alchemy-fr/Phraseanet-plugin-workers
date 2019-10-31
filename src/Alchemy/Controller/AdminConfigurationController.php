@@ -39,8 +39,8 @@ class AdminConfigurationController extends Controller
             if ($newTtlChanged) {
                 Config::setConfiguration($form->getData());
 
-                $queues = array_intersect_key(AMQPConnection::$dafaultQueues, $newTtlChanged);
-                $retryQueuesToReset = array_intersect_key(AMQPConnection::$dafaultRetryQueues, array_flip($queues));
+                $queues = array_intersect_key(AMQPConnection::$defaultQueues, $newTtlChanged);
+                $retryQueuesToReset = array_intersect_key(AMQPConnection::$defaultRetryQueues, array_flip($queues));
 
                 /** @var AMQPConnection $serverConnection */
                 $serverConnection = $this->app['alchemy_service.amqp.connection'];
