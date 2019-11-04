@@ -15,6 +15,7 @@ class MessagePublisher
     const WRITE_METADATAS_TYPE = 'writeMetadatas';
     const ASSETS_INGEST_TYPE   = 'assetsIngest';
     const CREATE_RECORD_TYPE   = 'createRecord';
+    const DELETE_RECORD_TYPE   = 'deleteRecord';
     const WEBHOOK_TYPE         = 'webhook';
     const POPULATE_INDEX_TYPE  = 'populateIndex';
 
@@ -25,6 +26,7 @@ class MessagePublisher
     const WEBHOOK_QUEUE        = 'webhook-queue';
     const ASSETS_INGEST_QUEUE  = 'ingest-queue';
     const CREATE_RECORD_QUEUE  = 'createrecord-queue';
+    const DELETE_RECORD_QUEUE  = 'deleterecord-queue';
     const POPULATE_INDEX_QUEUE = 'populateindex-queue';
 
     // retry queue

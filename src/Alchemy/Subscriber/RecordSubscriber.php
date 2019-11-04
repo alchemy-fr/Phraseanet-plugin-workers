@@ -4,6 +4,8 @@ namespace Alchemy\WorkerPlugin\Subscriber;
 
 use Alchemy\Phrasea\Application;
 use Alchemy\Phrasea\Application\Helper\ApplicationBoxAware;
+use Alchemy\Phrasea\Core\Event\Record\DeletedEvent;
+use Alchemy\Phrasea\Core\Event\Record\DeleteEvent;
 use Alchemy\Phrasea\Core\Event\Record\MetadataChangedEvent;
 use Alchemy\Phrasea\Core\Event\Record\RecordEvent;
 use Alchemy\Phrasea\Core\Event\Record\RecordEvents;
@@ -59,6 +61,23 @@ class RecordSubscriber implements EventSubscriberInterface
             $this->messagePublisher->publishMessage($payload, MessagePublisher::SUBDEF_QUEUE);
         }
 
+    }
+
+    public function onDelete(DeleteEvent $event)
+    {
+        //  first remove record from the grid answer, so first delete the record in the index elastic
+        $this->app['dispatcher']->dispatch(RecordEvents::DELETED, new DeletedEvent($event->getRecord()));
+
+        //  publish payload to queue
+        $payload = [
+            'message_type' => MessagePublisher::DELETE_RECORD_TYPE,
+            'payload' => [
+                'recordId'      => $event->getRecord()->getRecordId(),
+                'databoxId'     => $event->getRecord()->getDataboxId(),
+            ]
+        ];
+
+        $this->messagePublisher->publishMessage($payload, MessagePublisher::DELETE_RECORD_QUEUE);
     }
 
     public function onSubdefinitionCreationFailure(SubdefinitionCreationFailureEvent $event)
@@ -214,6 +233,7 @@ class RecordSubscriber implements EventSubscriberInterface
         return [
             RecordEvents::CREATED                                   => 'onRecordCreated',
             RecordEvents::SUBDEFINITION_CREATE                      => 'onSubdefinitionCreate',
+            RecordEvents::DELETE                                    => 'onDelete',
             WorkerPluginEvents::SUBDEFINITION_CREATION_FAILURE      => 'onSubdefinitionCreationFailure',
             RecordEvents::METADATA_CHANGED                          => 'onMetadataChanged',
             WorkerPluginEvents::STORY_CREATE_COVER                  => 'onStoryCreateCover',

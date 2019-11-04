@@ -13,6 +13,7 @@ namespace Alchemy\WorkerPlugin\Provider;
 
 use Alchemy\Phrasea\Core\Configuration\PropertyAccess;
 
+use Alchemy\Phrasea\Core\Event\Record\RecordEvents;
 use Alchemy\Phrasea\Core\Event\Subscriber\ExportSubscriber as ExportMailSubscriber;
 use Alchemy\Phrasea\Core\PhraseaEvents;
 use Alchemy\Phrasea\Model\Manipulator\WebhookEventManipulator;
@@ -83,8 +84,10 @@ class QueueServiceProvider implements PluginProviderInterface
 
                 // override  phraseanet core event
                 $exportMailListner = array(new ExportMailSubscriber($app), 'onCreateExportMail');
+                $deleteRecordListner = array($app['phraseanet.record-edit-subscriber'], 'onDelete');
 
                 $dispatcher->removeListener(PhraseaEvents::EXPORT_MAIL_CREATE, $exportMailListner);
+                $dispatcher->removeListener(RecordEvents::DELETE, $deleteRecordListner);
 
                 $dispatcher->addSubscriber(
                     (new RecordSubscriber($app)
