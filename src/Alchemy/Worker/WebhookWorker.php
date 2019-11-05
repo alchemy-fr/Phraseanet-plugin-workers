@@ -135,11 +135,14 @@ class WebhookWorker implements WorkerInterface
         }
 
         // format event data
-        if (!isset($payload['delivery_id'])) {
-            $webhookData = $webhookevent->getData();
-            $webhookData['time'] = $webhookevent->getCreated();
-            $webhookevent->setData($webhookData);
+        $webhookData = $webhookevent->getData();
+        if (isset($payload['delivery_id'])) {
+            $webhookData['retry_at'] = new \DateTime('now', new \DateTimeZone('UTC'));
+        } else {
+            $webhookData['to_deliver_at'] = new \DateTime('now', new \DateTimeZone('UTC'));
         }
+
+        $webhookevent->setData($webhookData);
 
         /** @var ProcessorInterface $eventProcessor */
         $eventProcessor = $this->app['webhook.processor_factory']->get($webhookevent);
