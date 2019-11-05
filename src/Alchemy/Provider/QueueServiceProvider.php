@@ -83,11 +83,11 @@ class QueueServiceProvider implements PluginProviderInterface
             $app->extend('dispatcher', function (EventDispatcherInterface $dispatcher, Application $app) {
 
                 // override  phraseanet core event
-                $exportMailListner = array(new ExportMailSubscriber($app), 'onCreateExportMail');
-                $deleteRecordListner = array($app['phraseanet.record-edit-subscriber'], 'onDelete');
+                $exportMailListener = array(new ExportMailSubscriber($app), 'onCreateExportMail');
+                $deleteRecordListener = array($app['phraseanet.record-edit-subscriber'], 'onDelete');
 
-                $dispatcher->removeListener(PhraseaEvents::EXPORT_MAIL_CREATE, $exportMailListner);
-                $dispatcher->removeListener(RecordEvents::DELETE, $deleteRecordListner);
+                $dispatcher->removeListener(PhraseaEvents::EXPORT_MAIL_CREATE, $exportMailListener);
+                $dispatcher->removeListener(RecordEvents::DELETE, $deleteRecordListener);
 
                 $dispatcher->addSubscriber(
                     (new RecordSubscriber($app)
