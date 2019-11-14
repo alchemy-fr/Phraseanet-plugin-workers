@@ -14,6 +14,7 @@ class MessagePublisher
     const WRITE_METADATAS_TYPE = 'writeMetadatas';
     const ASSETS_INGEST_TYPE   = 'assetsIngest';
     const CREATE_RECORD_TYPE   = 'createRecord';
+    const DELETE_RECORD_TYPE   = 'deleteRecord';
     const WEBHOOK_TYPE         = 'webhook';
     const POPULATE_INDEX_TYPE  = 'populateIndex';
     const PULL_ASSETS_TYPE     = 'pullAssets';
@@ -25,6 +26,7 @@ class MessagePublisher
     const WEBHOOK_QUEUE        = 'webhook-queue';
     const ASSETS_INGEST_QUEUE  = 'ingest-queue';
     const CREATE_RECORD_QUEUE  = 'createrecord-queue';
+    const DELETE_RECORD_QUEUE  = 'deleterecord-queue';
     const POPULATE_INDEX_QUEUE = 'populateindex-queue';
     const PULL_QUEUE           = 'pull-queue';
 
@@ -39,6 +41,16 @@ class MessagePublisher
     const RETRY_POPULATE_INDEX_QUEUE = 'retry-populateindex-queue';
     // use this queue to make a loop on a consumer
     const LOOP_PULL_QUEUE            = 'loop-pull-queue';
+
+    // all failed queue, if message is treated over 3 times it goes to the failed queue
+    const FAILED_EXPORT_QUEUE         = 'failed-export-queue';
+    const FAILED_SUBDEF_QUEUE         = 'failed-subdef-queue';
+    const FAILED_METADATAS_QUEUE      = 'failed-metadatas-queue';
+    const FAILED_WEBHOOK_QUEUE        = 'failed-webhook-queue';
+    const FAILED_ASSETS_INGEST_QUEUE  = 'failed-ingest-queue';
+    const FAILED_CREATE_RECORD_QUEUE  = 'failed-createrecord-queue';
+    const FAILED_POPULATE_INDEX_QUEUE = 'failed-populateindex-queue';
+
 
     const NEW_RECORD_MESSAGE   = 'newrecord';
 
@@ -114,5 +126,14 @@ class MessagePublisher
         // write logs directly in file
 
         call_user_func(array($this->logger, $method), $message, $context);
+    }
+
+    public function publishFailedMessage(array $payload, AMQPTable $headers, $queueName)
+    {
+        $msg = new AMQPMessage(json_encode($payload));
+        $msg->set('application_headers', $headers);
+
+        $channel = $this->serverConnection->setQueue($queueName);
+        $channel->basic_publish($msg, AMQPConnection::RETRY_ALCHEMY_EXCHANGE, $queueName);
     }
 }

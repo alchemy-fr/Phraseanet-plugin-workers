@@ -27,7 +27,9 @@ class AMQPConnection
         MessagePublisher::ASSETS_INGEST_TYPE    => MessagePublisher::ASSETS_INGEST_QUEUE,
         MessagePublisher::CREATE_RECORD_TYPE    => MessagePublisher::CREATE_RECORD_QUEUE,
         MessagePublisher::POPULATE_INDEX_TYPE   => MessagePublisher::POPULATE_INDEX_QUEUE,
-        MessagePublisher::PULL_QUEUE            => MessagePublisher::PULL_QUEUE
+        MessagePublisher::PULL_QUEUE            => MessagePublisher::PULL_QUEUE,
+        MessagePublisher::POPULATE_INDEX_TYPE   => MessagePublisher::POPULATE_INDEX_QUEUE,
+        MessagePublisher::DELETE_RECORD_TYPE    => MessagePublisher::DELETE_RECORD_QUEUE
     ];
 
     //  the corresponding worker queues and retry queues, loop queue
@@ -40,6 +42,17 @@ class AMQPConnection
         MessagePublisher::CREATE_RECORD_QUEUE   => MessagePublisher::RETRY_CREATE_RECORD_QUEUE,
         MessagePublisher::POPULATE_INDEX_QUEUE  => MessagePublisher::RETRY_POPULATE_INDEX_QUEUE,
         MessagePublisher::PULL_QUEUE            => MessagePublisher::LOOP_PULL_QUEUE
+    ];
+
+    // default message TTL in retry queue in millisecond
+    public static $defaultFailedQueues = [
+        MessagePublisher::WRITE_METADATAS_TYPE  => MessagePublisher::FAILED_METADATAS_QUEUE,
+        MessagePublisher::SUBDEF_CREATION_TYPE  => MessagePublisher::FAILED_SUBDEF_QUEUE,
+        MessagePublisher::EXPORT_MAIL_TYPE      => MessagePublisher::FAILED_EXPORT_QUEUE,
+        MessagePublisher::WEBHOOK_TYPE          => MessagePublisher::FAILED_WEBHOOK_QUEUE,
+        MessagePublisher::ASSETS_INGEST_TYPE    => MessagePublisher::FAILED_ASSETS_INGEST_QUEUE,
+        MessagePublisher::CREATE_RECORD_TYPE    => MessagePublisher::FAILED_CREATE_RECORD_QUEUE,
+        MessagePublisher::POPULATE_INDEX_TYPE   => MessagePublisher::FAILED_POPULATE_INDEX_QUEUE
     ];
 
     // default message TTL in retry queue in millisecond
@@ -121,6 +134,15 @@ class AMQPConnection
             ]));
 
             $this->channel->queue_bind($queueName, AMQPConnection::RETRY_ALCHEMY_EXCHANGE, $queueName);
+        } elseif (in_array($queueName, self::$defaultFailedQueues)) {
+            // if it's a failed queue
+            $this->channel->queue_declare($queueName, false, true, false, false, false);
+
+            $this->channel->queue_bind($queueName, AMQPConnection::RETRY_ALCHEMY_EXCHANGE, $queueName);
+        } else {
+            $this->channel->queue_declare($queueName, false, true, false, false, false);
+
+            $this->channel->queue_bind($queueName, AMQPConnection::ALCHEMY_EXCHANGE, $queueName);
         }
 
         return $this->channel;

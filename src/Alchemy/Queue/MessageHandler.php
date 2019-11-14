@@ -52,8 +52,16 @@ class MessageHandler
                 }
             }
 
-            // do nothing if message is yet executed more than 3 times
-            if ($count > self::MAX_OF_TRY && $data['message_type'] !=  MessagePublisher::PULL_ASSETS_TYPE) {
+            // if message is yet executed 3 times, save the unprocessed message in the corresponding failed queues
+            if ($count > self::MAX_OF_TRY  && $data['message_type'] !=  MessagePublisher::PULL_ASSETS_TYPE) {
+                $this->messagePublisher->publishFailedMessage($data['payload'], $headers, AMQPConnection::$defaultFailedQueues[$data['message_type']]);
+
+                $logMessage = sprintf("Rabbit message executed 3 times, it's to be saved in %s , payload >>> %s",
+                    AMQPConnection::$defaultFailedQueues[$data['message_type']],
+                    json_encode($data['payload'])
+                );
+                $this->messagePublisher->pushLog($logMessage);
+
                 $channel->basic_ack($message->delivery_info['delivery_tag']);
             } else {
                 try {

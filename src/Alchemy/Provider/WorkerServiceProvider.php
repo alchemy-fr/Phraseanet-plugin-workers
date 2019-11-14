@@ -8,6 +8,7 @@ use Alchemy\Phrasea\Plugin\PluginProviderInterface;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use Alchemy\WorkerPlugin\Worker\AssetsIngestWorker;
 use Alchemy\WorkerPlugin\Worker\CreateRecordWorker;
+use Alchemy\WorkerPlugin\Worker\DeleteRecordWorker;
 use Alchemy\WorkerPlugin\Worker\ExportMailWorker;
 use Alchemy\WorkerPlugin\Worker\Factory\CallableWorkerFactory;
 use Alchemy\WorkerPlugin\Worker\PopulateIndexWorker;
@@ -113,6 +114,10 @@ class WorkerServiceProvider implements PluginProviderInterface
             return new PullAssetsWorker($app['alchemy_service.message.publisher']);
         }));
 
+        $app['alchemy_service.type_based_worker_resolver']->addFactory(MessagePublisher::DELETE_RECORD_TYPE, new CallableWorkerFactory(function () use ($app) {
+            return (new DeleteRecordWorker())
+                ->setApplicationBox($app['phraseanet.appbox']);
+        }));
     }
 
     /**
