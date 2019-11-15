@@ -104,10 +104,13 @@ class AdminConfigurationController extends Controller
 
         $form->handleRequest($request);
         if ($form->isValid()) {
-            Config::setConfiguration(['pull_assets' => $form->getData()]);
-
             /** @var AMQPConnection $serverConnection */
             $serverConnection = $this->app['alchemy_service.amqp.connection'];
+            $serverConnection->setQueue(MessagePublisher::PULL_QUEUE);
+
+            // save new pull config
+            Config::setConfiguration(['pull_assets' => array_merge($pullAssetsConfig, $form->getData())]);
+
             // reinitialize the pull queues
             $serverConnection->reinitializeQueue([MessagePublisher::PULL_QUEUE]);
             $this->app['alchemy_service.message.publisher']->initializePullAssets();

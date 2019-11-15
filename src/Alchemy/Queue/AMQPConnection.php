@@ -183,11 +183,11 @@ class AMQPConnection
             isset($config['worker_plugin']['pull_assets']) &&
             isset($config['worker_plugin']['pull_assets']['pullInterval']) ) {
                     // convert in milli second
-            return intval($config['worker_plugin']['pull_assets']['pullInterval']) * 1000;
+            return (int)($config['worker_plugin']['pull_assets']['pullInterval']) * 1000;
         } elseif (isset($config['worker_plugin']['retry_queue']) &&
             isset($config['worker_plugin']['retry_queue'][array_search($routing, AMQPConnection::$defaultQueues)])) {
 
-            return intval($config['worker_plugin']['retry_queue'][array_search($routing, AMQPConnection::$defaultQueues)]);
+            return (int)($config['worker_plugin']['retry_queue'][array_search($routing, AMQPConnection::$defaultQueues)]);
         }
 
         return self::RETRY_DELAY;

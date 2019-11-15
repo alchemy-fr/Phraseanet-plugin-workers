@@ -12,8 +12,11 @@ class WorkerPluginPullAssetsType extends AbstractType
         parent::buildForm($builder, $options);
 
         $builder
-            ->add('endpoint', 'text', [
-                'label' => 'Uploader service endpoint'
+            ->add('endpointCommit', 'text', [
+                'label' => 'Endpoint get commit'
+            ])
+            ->add('endpointToken', 'text', [
+                'label' => 'Endpoint get token'
             ])
             ->add('clientSecret', 'text', [
                 'label' => 'Client secret'
@@ -22,7 +25,7 @@ class WorkerPluginPullAssetsType extends AbstractType
                 'label' => 'Client ID'
             ])
             ->add('pullInterval', 'text', [
-                'label' => 'Checking interval in second'
+                'label' => 'Fetching interval in second'
             ])
         ;
     }

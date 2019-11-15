@@ -3,7 +3,11 @@
 {{ form_start(form, {'action': path('worker_plugin_admin_pullAssets')}) }}
 
 <div class="control-group">
-    {{ form_row(form.endpoint) }}
+    {{ form_row(form.endpointCommit) }}
+</div>
+
+<div class="control-group">
+    {{ form_row(form.endpointToken) }}
 </div>
 
 <div class="control-group">
