@@ -69,7 +69,6 @@ class DBManipulator
     {
         $row = 1;
         $pdo = Config::getWorkerSqliteConnection();
-
         $pdo->beginTransaction();
 
         try {
@@ -93,6 +92,33 @@ class DBManipulator
         }
 
         return count($row);
+    }
+
+    /**
+     * @param $commitId
+     * @return bool
+     */
+    public static function isCommitToBeCreating($commitId)
+    {
+        $pdo = Config::getWorkerSqliteConnection();
+
+        $pdo->beginTransaction();
+        $row = 0;
+        try {
+            $pdo->query("CREATE TABLE IF NOT EXISTS commits(commit_id TEXT NOT NULL, asset TEXT NOT NULL);");
+
+            $stmt = $pdo->prepare("SELECT * FROM commits WHERE commit_id = :commit_id");
+            $stmt->execute([
+                ':commit_id' => $commitId,
+            ]);
+
+            $row = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            $pdo->commit();
+        } catch (\Exception $e) {
+            //no-op
+        }
+
+        return count($row) ? true : false;
     }
 
     public static function saveAssetsList($commitId, $assetIds)

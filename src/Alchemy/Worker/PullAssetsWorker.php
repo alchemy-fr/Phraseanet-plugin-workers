@@ -3,6 +3,7 @@
 namespace Alchemy\WorkerPlugin\Worker;
 
 use Alchemy\WorkerPlugin\Configuration\Config;
+use Alchemy\WorkerPlugin\Model\DBManipulator;
 use Alchemy\WorkerPlugin\Queue\MessagePublisher;
 use GuzzleHttp\Client;
 
@@ -58,7 +59,8 @@ class PullAssetsWorker implements WorkerInterface
         $baseUrl = $urlInfo['scheme'] . '://' . $urlInfo['host'] .':'.$urlInfo['port'];
 
         foreach ($commits as $commit) {
-            if (!$commit['acknowledged']) {
+            //  send only payload in ingest-queue if the commit is ack false and it is not being creating
+            if (!$commit['acknowledged'] && !DBManipulator::isCommitToBeCreating($commit['id'])) {
                 $this->messagePublisher->pushLog("A new commit found in the uploader ! commit_ID : ".$commit['id']);
 
                 $payload = [
