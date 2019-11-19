@@ -27,10 +27,12 @@ class AMQPConnection
         MessagePublisher::ASSETS_INGEST_TYPE    => MessagePublisher::ASSETS_INGEST_QUEUE,
         MessagePublisher::CREATE_RECORD_TYPE    => MessagePublisher::CREATE_RECORD_QUEUE,
         MessagePublisher::POPULATE_INDEX_TYPE   => MessagePublisher::POPULATE_INDEX_QUEUE,
+        MessagePublisher::PULL_QUEUE            => MessagePublisher::PULL_QUEUE,
+        MessagePublisher::POPULATE_INDEX_TYPE   => MessagePublisher::POPULATE_INDEX_QUEUE,
         MessagePublisher::DELETE_RECORD_TYPE    => MessagePublisher::DELETE_RECORD_QUEUE
     ];
 
-    //  the corresponding worker queues and retry queues
+    //  the corresponding worker queues and retry queues, loop queue
     public static $defaultRetryQueues = [
         MessagePublisher::METADATAS_QUEUE       => MessagePublisher::RETRY_METADATAS_QUEUE,
         MessagePublisher::SUBDEF_QUEUE          => MessagePublisher::RETRY_SUBDEF_QUEUE,
@@ -38,9 +40,11 @@ class AMQPConnection
         MessagePublisher::WEBHOOK_QUEUE         => MessagePublisher::RETRY_WEBHOOK_QUEUE,
         MessagePublisher::ASSETS_INGEST_QUEUE   => MessagePublisher::RETRY_ASSETS_INGEST_QUEUE,
         MessagePublisher::CREATE_RECORD_QUEUE   => MessagePublisher::RETRY_CREATE_RECORD_QUEUE,
-        MessagePublisher::POPULATE_INDEX_QUEUE  => MessagePublisher::RETRY_POPULATE_INDEX_QUEUE
+        MessagePublisher::POPULATE_INDEX_QUEUE  => MessagePublisher::RETRY_POPULATE_INDEX_QUEUE,
+        MessagePublisher::PULL_QUEUE            => MessagePublisher::LOOP_PULL_QUEUE
     ];
 
+    // default message TTL in retry queue in millisecond
     public static $defaultFailedQueues = [
         MessagePublisher::WRITE_METADATAS_TYPE  => MessagePublisher::FAILED_METADATAS_QUEUE,
         MessagePublisher::SUBDEF_CREATION_TYPE  => MessagePublisher::FAILED_SUBDEF_QUEUE,
@@ -113,7 +117,6 @@ class AMQPConnection
             // declare also the corresponding retry queue
             // use this to delay the delivery of a message to the alchemy-exchange
             $this->channel->queue_declare(self::$defaultRetryQueues[$queueName], false, true, false, false, false, new AMQPTable([
-                //  uncomment this when we want to treat non-ack message
                 'x-dead-letter-exchange'    => AMQPConnection::ALCHEMY_EXCHANGE,
                 'x-dead-letter-routing-key' => $queueName,
                 'x-message-ttl'             => $this->getTtlPerRouting($queueName)
@@ -125,7 +128,6 @@ class AMQPConnection
             // if it's a retry queue
             $routing = array_search($queueName, AMQPConnection::$defaultRetryQueues);
             $this->channel->queue_declare($queueName, false, true, false, false, false, new AMQPTable([
-                //  uncomment this when we want to treat non-ack message
                 'x-dead-letter-exchange'    => AMQPConnection::ALCHEMY_EXCHANGE,
                 'x-dead-letter-routing-key' => $routing,
                 'x-message-ttl'             => $this->getTtlPerRouting($routing)
@@ -149,7 +151,16 @@ class AMQPConnection
     public function reinitializeQueue(array $queuNames)
     {
         foreach ($queuNames as $queuName) {
-            $this->channel->queue_delete($queuName);
+            if (in_array($queuName, self::$defaultQueues)) {
+                $this->channel->queue_purge($queuName);
+            } else {
+                $this->channel->queue_delete($queuName);
+            }
+
+            if (isset(self::$defaultRetryQueues[$queuName])) {
+                $this->channel->queue_delete(self::$defaultRetryQueues[$queuName]);
+            }
+
             $this->setQueue($queuName);
         }
     }
@@ -167,10 +178,18 @@ class AMQPConnection
     private function getTtlPerRouting($routing)
     {
         $config = Config::getConfiguration();
-        $config = $config['worker_plugin'];
 
-        $messageTtl = isset($config[array_search($routing, AMQPConnection::$defaultQueues)]) ? $config[array_search($routing, AMQPConnection::$defaultQueues)] : self::RETRY_DELAY;
+        if ($routing == MessagePublisher::PULL_QUEUE &&
+            isset($config['worker_plugin']['pull_assets']) &&
+            isset($config['worker_plugin']['pull_assets']['pullInterval']) ) {
+                    // convert in milli second
+            return (int)($config['worker_plugin']['pull_assets']['pullInterval']) * 1000;
+        } elseif (isset($config['worker_plugin']['retry_queue']) &&
+            isset($config['worker_plugin']['retry_queue'][array_search($routing, AMQPConnection::$defaultQueues)])) {
 
-        return intval($messageTtl);
+            return (int)($config['worker_plugin']['retry_queue'][array_search($routing, AMQPConnection::$defaultQueues)]);
+        }
+
+        return self::RETRY_DELAY;
     }
 }

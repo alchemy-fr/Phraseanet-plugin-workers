@@ -2,7 +2,6 @@
 
 namespace Alchemy\WorkerPlugin\Queue;
 
-use Alchemy\WorkerPlugin\Configuration\Config;
 use Monolog\Logger;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPTable;
@@ -18,6 +17,7 @@ class MessagePublisher
     const DELETE_RECORD_TYPE   = 'deleteRecord';
     const WEBHOOK_TYPE         = 'webhook';
     const POPULATE_INDEX_TYPE  = 'populateIndex';
+    const PULL_ASSETS_TYPE     = 'pullAssets';
 
     // worker queue  to be consumed, when no ack , it is requeued to the retry queue
     const EXPORT_QUEUE         = 'export-queue';
@@ -28,6 +28,7 @@ class MessagePublisher
     const CREATE_RECORD_QUEUE  = 'createrecord-queue';
     const DELETE_RECORD_QUEUE  = 'deleterecord-queue';
     const POPULATE_INDEX_QUEUE = 'populateindex-queue';
+    const PULL_QUEUE           = 'pull-queue';
 
     // retry queue
     // we can use these retry queue with TTL, so when message expires it is requeued to the corresponding worker queue
@@ -38,6 +39,8 @@ class MessagePublisher
     const RETRY_ASSETS_INGEST_QUEUE  = 'retry-ingest-queue';
     const RETRY_CREATE_RECORD_QUEUE  = 'retry-createrecord-queue';
     const RETRY_POPULATE_INDEX_QUEUE = 'retry-populateindex-queue';
+    // use this queue to make a loop on a consumer
+    const LOOP_PULL_QUEUE            = 'loop-pull-queue';
 
     // all failed queue, if message is treated over 3 times it goes to the failed queue
     const FAILED_EXPORT_QUEUE         = 'failed-export-queue';
@@ -70,7 +73,7 @@ class MessagePublisher
         $routing = array_search($queueName, AMQPConnection::$defaultRetryQueues);
 
         if (count($retryCount) && $routing != false) {
-            // ad a message header information
+            // add a message header information
             $headers = new AMQPTable([
                 'x-death' => [
                     [
@@ -94,6 +97,18 @@ class MessagePublisher
         $channel->basic_publish($msg, $exchange, $queueName);
 
         return true;
+    }
+
+    public function initializePullAssets()
+    {
+        $payload = [
+            'message_type' => self::PULL_ASSETS_TYPE,
+            'payload' => [
+                'initTimestamp' => new \DateTime('now', new \DateTimeZone('UTC'))
+            ]
+        ];
+
+        $this->publishMessage($payload, self::PULL_QUEUE);
     }
 
     public function connectionClose()
