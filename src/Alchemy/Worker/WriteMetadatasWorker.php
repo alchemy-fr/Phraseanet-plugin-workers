@@ -4,6 +4,8 @@ namespace Alchemy\WorkerPlugin\Worker;
 
 use Alchemy\Phrasea\Application\Helper\ApplicationBoxAware;
 use Alchemy\Phrasea\Application\Helper\DispatcherAware;
+use Alchemy\Phrasea\Core\Event\Record\RecordEvents;
+use Alchemy\Phrasea\Core\Event\Record\SubdefinitionCreateEvent;
 use Alchemy\Phrasea\Core\PhraseaTokens;
 use Alchemy\Phrasea\Metadata\TagFactory;
 use Alchemy\WorkerPlugin\Event\SubdefinitionWritemetaEvent;
@@ -178,6 +180,13 @@ class WriteMetadatasWorker implements WorkerInterface
 
                 // mark write metas finished
                 $this->updateJeton($record);
+
+                // write meta for the document is finished
+                // if it's a new record, order to create subdef
+                if ($payload['subdefName'] === 'document' && isset($payload['status']) && $payload['status'] === MessagePublisher::SUBDEF_TO_CREATE) {
+                    $this->dispatch(RecordEvents::SUBDEFINITION_CREATE, new SubdefinitionCreateEvent($record, true));
+                }
+
             } else {
                 $count = isset($payload['count']) ? $payload['count'] + 1 : 2 ;
 

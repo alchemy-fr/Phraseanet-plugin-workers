@@ -129,7 +129,8 @@ class RecordSubscriber implements EventSubscriberInterface
                         'payload' => [
                             'recordId'      => $recordId,
                             'databoxId'     => $databoxId,
-                            'subdefName'    => $subdef->get_name()
+                            'subdefName'    => $subdef->get_name(),
+                            'status'        => ($event->isNewRecord() && !$event->isNosubdef()) ? MessagePublisher::SUBDEF_TO_CREATE : ''
                         ]
                     ];
 
