@@ -52,8 +52,7 @@ class MessagePublisher
     const FAILED_POPULATE_INDEX_QUEUE = 'failed-populateindex-queue';
 
 
-    const NEW_RECORD_MESSAGE    = 'newrecord';
-    const SUBDEF_TO_CREATE      = 'subdefToCreate';
+    const NEW_RECORD_MESSAGE   = 'newrecord';
 
 
     /** @var AMQPConnection $serverConnection */
