@@ -50,7 +50,7 @@ class QueueServiceProvider implements PluginProviderInterface
             /** @var PropertyAccess $configuration */
             $configuration = $app['conf'];
 
-            $serverConfigurations = $configuration->get(['rabbitmq', 'server'], $defaultConfiguration);
+            $serverConfigurations = $configuration->get(['workers', 'queue', 'worker-queue'], $defaultConfiguration);
 
             return $serverConfigurations;
         });
