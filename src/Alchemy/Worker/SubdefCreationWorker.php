@@ -49,11 +49,58 @@ class SubdefCreationWorker implements WorkerInterface
             $databoxId      = $payload['databoxId'];
             $wantedSubdef   = [$payload['subdefName']];
 
-            $record = $this->findDataboxById($databoxId)->get_record($recordId);
+            $databox = $this->findDataboxById($databoxId);
+            $record = $databox->get_record($recordId);
 
             $oldLogger = $this->subdefGenerator->getLogger();
 
             if (!$record->isStory()) {
+                $abConnection = $this->getApplicationBox()->get_connection();
+                // check if there is a write meta running for the record or the same task running
+                $statement = $abConnection->prepare('SELECT subdef_name FROM worker WHERE ((work & :write_meta) > 0 OR ((work & :make_subdef) > 0 AND subdef_name = :subdef_name) ) AND record_id = :record_id AND databox_id = :databox_id');
+                $statement->execute([
+                    'write_meta' => PhraseaTokens::WRITE_META,
+                    'make_subdef'=> PhraseaTokens::MAKE_SUBDEF,
+                    'subdef_name'=> $payload['subdefName'],
+                    'record_id'  => $recordId,
+                    'databox_id' => $databoxId
+                ]);
+
+                $rs = $statement->fetchAll(\PDO::FETCH_ASSOC);
+                $statement->closeCursor();
+
+                if (count($rs)) {
+                    // the file is in used to write meta
+                    $payload = [
+                        'message_type'  => MessagePublisher::SUBDEF_CREATION_TYPE,
+                        'payload'       => $payload
+                    ];
+                    $this->messagePublisher->publishMessage($payload, MessagePublisher::DELAYED_SUBDEF_QUEUE);
+
+                    $message = MessagePublisher::SUBDEF_CREATION_TYPE.' to be re-published! >> Payload ::'. json_encode($payload);
+                    $this->messagePublisher->pushLog($message);
+
+                    return ;
+                }
+
+                // tell that a file is in used to create subdef
+                $abConnection->beginTransaction();
+
+                try {
+                    $sql = "INSERT INTO worker (databox_id, record_id, subdef_name, work) VALUES (:databox_id, :record_id, :subdef_name, :work)";
+                    $statement = $abConnection->prepare($sql);
+                    $statement->execute([
+                        'databox_id'    => $databoxId,
+                        'record_id'     => $recordId,
+                        'subdef_name'   => $payload['subdefName'],
+                        'work'          => PhraseaTokens::MAKE_SUBDEF,
+                    ]);
+                    $statement->closeCursor();
+                    $abConnection->commit();
+                } catch (\Exception $e) {
+                    $abConnection->rollback();
+                }
+
                 $this->subdefGenerator->setLogger($this->logger);
 
                 $this->subdefGenerator->generateSubdefs($record, $wantedSubdef);
@@ -104,6 +151,19 @@ class SubdefCreationWorker implements WorkerInterface
                             $this->dispatcher->dispatch(WorkerPluginEvents::STORY_CREATE_COVER, new StoryCreateCoverEvent($data));
                         }
                     }
+                }
+
+                $abConnection->beginTransaction();
+                try {
+                    // subdef creation is finished for this subdef_name, so delete from the worker table
+                    $abConnection->executeUpdate('DELETE FROM worker WHERE record_id = :record_id AND databox_id = :databox_id AND subdef_name = :subdef_name', [
+                        'databox_id'    => $databoxId,
+                        'record_id'     => $recordId,
+                        'subdef_name'   => $payload['subdefName'],
+                    ]);
+                    $abConnection->commit();
+                } catch (\Exception $e) {
+                    $abConnection->rollback();
                 }
             }
         }

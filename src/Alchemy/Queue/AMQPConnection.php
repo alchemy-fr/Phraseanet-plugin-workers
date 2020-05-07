@@ -26,7 +26,6 @@ class AMQPConnection
         MessagePublisher::WEBHOOK_TYPE          => MessagePublisher::WEBHOOK_QUEUE,
         MessagePublisher::ASSETS_INGEST_TYPE    => MessagePublisher::ASSETS_INGEST_QUEUE,
         MessagePublisher::CREATE_RECORD_TYPE    => MessagePublisher::CREATE_RECORD_QUEUE,
-        MessagePublisher::POPULATE_INDEX_TYPE   => MessagePublisher::POPULATE_INDEX_QUEUE,
         MessagePublisher::PULL_QUEUE            => MessagePublisher::PULL_QUEUE,
         MessagePublisher::POPULATE_INDEX_TYPE   => MessagePublisher::POPULATE_INDEX_QUEUE,
         MessagePublisher::DELETE_RECORD_TYPE    => MessagePublisher::DELETE_RECORD_QUEUE
@@ -53,6 +52,11 @@ class AMQPConnection
         MessagePublisher::ASSETS_INGEST_TYPE    => MessagePublisher::FAILED_ASSETS_INGEST_QUEUE,
         MessagePublisher::CREATE_RECORD_TYPE    => MessagePublisher::FAILED_CREATE_RECORD_QUEUE,
         MessagePublisher::POPULATE_INDEX_TYPE   => MessagePublisher::FAILED_POPULATE_INDEX_QUEUE
+    ];
+
+    public static $defaultDelayedQueues = [
+        MessagePublisher::METADATAS_QUEUE  => MessagePublisher::DELAYED_METADATAS_QUEUE,
+        MessagePublisher::SUBDEF_QUEUE     => MessagePublisher::DELAYED_SUBDEF_QUEUE
     ];
 
     // default message TTL in retry queue in millisecond
@@ -137,6 +141,16 @@ class AMQPConnection
         } elseif (in_array($queueName, self::$defaultFailedQueues)) {
             // if it's a failed queue
             $this->channel->queue_declare($queueName, false, true, false, false, false);
+
+            $this->channel->queue_bind($queueName, AMQPConnection::RETRY_ALCHEMY_EXCHANGE, $queueName);
+        } elseif (in_array($queueName, self::$defaultDelayedQueues)) {
+            // if it's a delayed queue
+            $routing = array_search($queueName, AMQPConnection::$defaultDelayedQueues);
+            $this->channel->queue_declare($queueName, false, true, false, false, false, new AMQPTable([
+                'x-dead-letter-exchange'    => AMQPConnection::ALCHEMY_EXCHANGE,
+                'x-dead-letter-routing-key' => $routing,
+                'x-message-ttl'             => 5000
+            ]));
 
             $this->channel->queue_bind($queueName, AMQPConnection::RETRY_ALCHEMY_EXCHANGE, $queueName);
         } else {
