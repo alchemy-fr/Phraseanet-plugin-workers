@@ -49,8 +49,57 @@ class WriteMetadatasWorker implements WorkerInterface
 
             $MWG      = isset($payload['MWG']) ? $payload['MWG'] : false;
             $clearDoc = isset($payload['clearDoc']) ? $payload['clearDoc'] : false;
-
             $databox = $this->findDataboxById($databoxId);
+
+
+            $param = ($payload['subdefName'] == "document") ? PhraseaTokens::WRITE_META_DOC : PhraseaTokens::WRITE_META_SUBDEF;
+
+            $abConnection = $this->getApplicationBox()->get_connection();
+
+            // check if there is a make subdef running for the record or the same task running
+            $statement = $abConnection->prepare('SELECT subdef_name FROM worker WHERE ((work & :make_subdef) > 0 OR ((work & :write_meta) > 0 AND subdef_name = :subdef_name) ) AND record_id = :record_id AND databox_id = :databox_id');
+            $statement->execute([
+                'make_subdef'=> PhraseaTokens::MAKE_SUBDEF,
+                'write_meta' => PhraseaTokens::WRITE_META,
+                'subdef_name'=> $payload['subdefName'],
+                'record_id'  => $recordId,
+                'databox_id' => $databoxId
+            ]);
+
+            $rs = $statement->fetchAll(\PDO::FETCH_ASSOC);
+            $statement->closeCursor();
+
+            if (count($rs)) {
+                // the file is in used to generate subdef
+                $payload = [
+                    'message_type' => MessagePublisher::WRITE_METADATAS_TYPE,
+                    'payload' => $payload
+                ];
+                $this->messagePublisher->publishMessage($payload, MessagePublisher::DELAYED_METADATAS_QUEUE);
+
+                $message = MessagePublisher::WRITE_METADATAS_TYPE.' to be re-published! >> Payload ::'. json_encode($payload);
+                $this->messagePublisher->pushLog($message);
+
+                return ;
+            }
+            // tell that a file is in used to write meta
+            $abConnection->beginTransaction();
+
+            try {
+                $sql = "INSERT INTO worker (databox_id, record_id, subdef_name, work) VALUES (:databox_id, :record_id, :subdef_name, :work)";
+                $statement = $abConnection->prepare($sql);
+                $statement->execute([
+                    'databox_id'    => $databoxId,
+                    'record_id'     => $recordId,
+                    'subdef_name'   => $payload['subdefName'],
+                    'work'          => $param,
+                ]);
+                $statement->closeCursor();
+                $abConnection->commit();
+            } catch (\Exception $e) {
+                $abConnection->rollback();
+            }
+
             $record  = $databox->get_record($recordId);
 
             $subdef = $record->get_subdef($payload['subdefName']);
@@ -189,6 +238,20 @@ class WriteMetadatasWorker implements WorkerInterface
                     $count
                 ));
             }
+
+            $abConnection->beginTransaction();
+            try {
+                // the write meta is finished , so delete from the worker table
+                $abConnection->executeUpdate('DELETE FROM worker WHERE record_id = :record_id AND databox_id = :databox_id AND subdef_name = :subdef_name', [
+                    'databox_id'    => $databoxId,
+                    'record_id'     => $recordId,
+                    'subdef_name'   => $payload['subdefName'],
+                ]);
+                $abConnection->commit();
+            } catch (\Exception $e) {
+                $abConnection->rollback();
+            }
+
         }
 
     }

@@ -51,6 +51,9 @@ class MessagePublisher
     const FAILED_CREATE_RECORD_QUEUE  = 'failed-createrecord-queue';
     const FAILED_POPULATE_INDEX_QUEUE = 'failed-populateindex-queue';
 
+    // delayed queue when record is locked
+    const DELAYED_SUBDEF_QUEUE    = 'delayed-subdef-queue';
+    const DELAYED_METADATAS_QUEUE = 'delayed-metadatas-queue';
 
     const NEW_RECORD_MESSAGE   = 'newrecord';
 
